@@ -139,15 +139,20 @@
                 return;
             }
 
-            fetch(webhookUrl, {
-                method: 'DELETE'
+            fetch('/api/webhook', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: webhookUrl })
             })
-            .then(response => {
-                if (response.status === 204) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     alert("Webhook başarıyla silindi.");
                     document.getElementById('output').textContent = "Webhook başarıyla silindi.";
                 } else {
-                    alert("Webhook silinemedi. Durum kodu: " + response.status);
+                    alert("Webhook silinemedi.");
                 }
             })
             .catch(error => {
@@ -158,22 +163,21 @@
         // Webhook'a spam gönderme fonksiyonu
         async function spamWebhook(url, message) {
             try {
-                const response = await fetch(url, {
+                const response = await fetch('/api/webhook', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ content: message })
+                    body: JSON.stringify({ url: url, message: message })
                 });
 
-                if (response.status === 204) {
+                const result = await response.json();
+
+                if (result.success) {
                     count++;
                     document.getElementById('output').textContent = `Mesaj Sayacı: ${count}\nSpam gönderiliyor...`;
-                } else if (response.status === 429) {
-                    document.getElementById('output').textContent += "\nRate limit aşımı! Bekleniyor...";
                 } else {
-                    document.getElementById('output').textContent += "\nWebhook veya URL hatalı!";
-                    clearInterval(spamInterval); // Hatalı durumda spamı durdur
+                    document.getElementById('output').textContent += "\nWebhook hatalı veya mesaj gönderilemedi!";
                 }
             } catch (error) {
                 document.getElementById('output').textContent += "\nHata oluştu: " + error;
