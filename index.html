@@ -98,7 +98,6 @@
         <div>
             <button onclick="startSpamming()">Spam Başlat</button>
             <button id="stopButton" onclick="stopSpamming()" disabled>Spam Durdur</button>
-            <button onclick="deleteWebhook()">Webhook Sil</button>
         </div>
         <div id="output"></div>
     </div>
@@ -132,37 +131,7 @@
         function stopSpamming() {
             clearInterval(spamInterval);
             document.getElementById('stopButton').disabled = true;
-            document.getElementById('output').textContent += "\nSpam işlemi durduruldu.";
-        }
-
-        // Webhook silme işlemi
-        function deleteWebhook() {
-            const webhookUrl = document.getElementById('webhookUrl').value;
-
-            if (!webhookUrl || !isValidUrl(webhookUrl)) {
-                alert("Geçersiz URL! Lütfen geçerli bir Webhook URL'si girin.");
-                return;
-            }
-
-            fetch('/api/webhook', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url: webhookUrl })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("Webhook başarıyla silindi.");
-                    document.getElementById('output').textContent = "Webhook başarıyla silindi.";
-                } else {
-                    alert("Webhook silinemedi.");
-                }
-            })
-            .catch(error => {
-                alert("Hata oluştu: " + error);
-            });
+            document.getElementById('output').textContent = `Spam işlemi durduruldu. Son mesaja kadar ${count} spam gönderildi.`;
         }
 
         // Webhook'a spam gönderme fonksiyonu
@@ -181,11 +150,8 @@
                 if (result.success) {
                     count++;
                     document.getElementById('output').textContent = `Mesaj Sayacı: ${count}\nSpam gönderiliyor...`;
-                } else {
-                    document.getElementById('output').textContent += "\nWebhook hatalı veya mesaj gönderilemedi!";
                 }
             } catch (error) {
-                document.getElementById('output').textContent += "\nHata oluştu: " + error;
                 clearInterval(spamInterval); // Hata durumunda spamı durdur
             }
         }
