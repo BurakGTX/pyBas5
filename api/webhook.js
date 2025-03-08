@@ -4,10 +4,7 @@ export default async function handler(req, res) {
     }
 
     const discordWebhookURL = "https://discord.com/api/webhooks/1347982406941937775/zj_AV86uHwEYfRa29AxNzCockE23BcXibtKU-DYk9z66Vme537V54InbejP7FLFHWBxH";
-    const message = {
-        content: req.body.content || "Neocities'ten gelen mesaj!",
-        username: "Vercel Bot"
-    };
+    const message = { content: req.body.content || "Varsayılan mesaj" };
 
     try {
         const response = await fetch(discordWebhookURL, {
@@ -16,13 +13,13 @@ export default async function handler(req, res) {
             body: JSON.stringify(message),
         });
 
-        if (!response.ok) {
-            throw new Error(`Discord API hatası: ${response.statusText}`);
+        if (response.ok) {
+            return res.status(200).json({ message: "Mesaj başarıyla gönderildi!" });
+        } else {
+            throw new Error("Webhook isteği başarısız");
         }
-
-        res.status(200).json({ message: "Mesaj başarıyla gönderildi!" });
     } catch (error) {
-        console.error("Hata:", error);
-        res.status(500).json({ error: "Mesaj gönderme başarısız." });
+        console.error("Error:", error);
+        return res.status(500).json({ error: "Mesaj gönderilemedi" });
     }
 }
