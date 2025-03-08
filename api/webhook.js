@@ -20,6 +20,22 @@ export default async function handler(req, res) {
         } catch (error) {
             res.status(500).json({ success: false, message: 'Error occurred' });
         }
+    } else if (req.method === 'DELETE') {
+        const { url } = req.body;
+
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+            });
+
+            if (response.status === 204) {
+                res.status(200).json({ success: true, message: 'Webhook deleted successfully' });
+            } else {
+                res.status(response.status).json({ success: false, message: 'Failed to delete webhook' });
+            }
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Error occurred during deletion' });
+        }
     } else {
         res.status(405).json({ success: false, message: 'Method Not Allowed' });
     }
