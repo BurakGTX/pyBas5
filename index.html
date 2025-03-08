@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Webhook Gönder</title>
+</head>
+<body>
+    <h1>Neocities’ten Discord’a Mesaj Gönder</h1>
+    <textarea id="message" placeholder="Mesajınızı buraya yazın..."></textarea>
+    <button onclick="sendMessage()">Gönder</button>
+
+    <script>
+        function sendMessage() {
+            const vercelFunctionURL = "https://py-bas5.vercel.app/api/webhook";  // Vercel API URL'nizi buraya ekleyin!
+            const message = document.getElementById("message").value;
+
+            fetch(vercelFunctionURL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                } else {
+                    alert("Bir hata oluştu.");
+                }
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                alert("Mesaj gönderilirken bir hata oluştu.");
+            });
+        }
+    </script>
+</body>
+</html>
