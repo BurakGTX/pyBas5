@@ -1,12 +1,26 @@
-let totalVisits = 0; // global ziyaretçi sayısı
+let totalVisits = 0;
+
+// Son sıfırlama zamanı
+let lastReset = Date.now();
+
+// Sıfırlama süresi: 1 saat = 3600000 ms
+const RESET_INTERVAL = 60 * 60 * 1000;
 
 const fetchJSON = (url) => fetch(url).then(r => r.json());
 
 export default async function handler(req,res){
-  const USER_ID = "3380915154"; // sadece senin profilin
-  totalVisits++; // her çağrıda 1 artar
+  const USER_ID = "3380915154";
 
-  try {
+  // 1 saat kontrolü: geçmiş mi?
+  if(Date.now() - lastReset >= RESET_INTERVAL){
+    totalVisits = 0;
+    lastReset = Date.now();
+  }
+
+  // Ziyaretçi sayısını arttır
+  totalVisits++;
+
+  try{
     const user = await fetchJSON(`https://users.roblox.com/v1/users/${USER_ID}`);
     const avatar = await fetchJSON(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${USER_ID}&size=420x420&format=Png`);
     
@@ -18,7 +32,7 @@ export default async function handler(req,res){
     try{ followers=(await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followers/count`)).count; }catch{}
     try{ following=(await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followings/count`)).count; }catch{}
     try{ groups=(await fetchJSON(`https://groups.roblox.com/v2/users/${USER_ID}/groups/roles`)).data.length; }catch{}
-    
+
     let gamePasses = 0;
 
     res.setHeader("Access-Control-Allow-Origin","*");
@@ -26,6 +40,7 @@ export default async function handler(req,res){
       user:{id:user.id,name:user.name,description:user.description,created:user.created,avatar:avatar.data[0].imageUrl},
       stats:{robux,friends,followers,following,groups,gamePasses,visits:totalVisits}
     });
+
   } catch(e){
     console.error(e);
     res.setHeader("Access-Control-Allow-Origin","*");
