@@ -1,166 +1,107 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webhook Spam Aracı</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #2c3e50;
-            color: white;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-            padding: 20px;
-            border-radius: 10px;
-            background-color: #34495e;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            font-size: 30px;
-            color: #ecf0f1;
-            margin-bottom: 20px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #7f8c8d;
-            background-color: #95a5a6;
-            color: white;
-        }
-
-        button {
-            background-color: #e74c3c;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px 0;
-            font-size: 16px;
-            width: 100%;
-        }
-
-        button:hover {
-            background-color: #c0392b;
-        }
-
-        #output {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #1abc9c;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 14px;
-            color: #2c3e50;
-        }
-
-        #stopButton {
-            background-color: #f39c12;
-        }
-
-        #stopButton:hover {
-            background-color: #e67e22;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Roblox Profil Paneli</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #fff;
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 30px;
+}
+.card {
+  background: #1e293b;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.profile {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.profile img {
+  width: 120px;
+  border-radius: 12px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 15px;
+}
+.box {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Webhook Spam Aracı</h1>
-        <div>
-            <label for="webhookUrl">Webhook URL'si:</label>
-            <input type="text" id="webhookUrl" placeholder="Webhook URL'sini girin">
-        </div>
-        <div>
-            <label for="message">Mesaj:</label>
-            <input type="text" id="message" placeholder="Göndermek istediğiniz mesajı girin">
-        </div>
-        <div>
-            <label for="speed">Spam Hızı (ms):</label>
-            <input type="number" id="speed" value="1000" min="100" max="5000" step="100">
-        </div>
-        <div>
-            <button onclick="startSpamming()">Spam Başlat</button>
-            <button id="stopButton" onclick="stopSpamming()" disabled>Spam Durdur</button>
-        </div>
-        <div id="output"></div>
+
+<div class="container">
+  <div class="card profile">
+    <img id="avatar">
+    <div>
+      <h1 id="name"></h1>
+      <p id="desc"></p>
+      <small id="created"></small>
     </div>
+  </div>
 
-    <script>
-        let spamInterval = null;
-        let count = 0;
+  <div class="card grid">
+    <div class="box">👥 Arkadaş<br><b id="friends"></b></div>
+    <div class="box">⭐ Takipçi<br><b id="followers"></b></div>
+    <div class="box">➡️ Takip<br><b id="following"></b></div>
+    <div class="box">👪 Gruplar<br><b id="groups"></b></div>
+    <div class="box">🎟️ Game Pass<br><b id="passes"></b></div>
+  </div>
 
-        // Spam göndermeyi başlat
-        function startSpamming() {
-            const webhookUrl = document.getElementById('webhookUrl').value;
-            const message = document.getElementById('message').value;
-            const speed = document.getElementById('speed').value;  // Kullanıcının hızını al
+  <div class="card">
+    <h2>👥 Arkadaşlar (ilk 10)</h2>
+    <ul id="friendList"></ul>
+  </div>
 
-            if (!webhookUrl || !message) {
-                alert("Webhook URL'si ve mesajı girmeniz gerekmektedir!");
-                return;
-            }
+  <div class="card">
+    <h2>👪 Gruplar</h2>
+    <ul id="groupList"></ul>
+  </div>
+</div>
 
-            if (!isValidUrl(webhookUrl)) {
-                alert("Geçersiz URL! Lütfen geçerli bir Webhook URL'si girin.");
-                return;
-            }
+<script>
+fetch("https://PROJE_ADI.vercel.app/api/roblox")
+.then(r => r.json())
+.then(data => {
+  document.getElementById("avatar").src = data.user.avatar;
+  document.getElementById("name").innerText = data.user.name;
+  document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
+  document.getElementById("created").innerText = "Hesap: " + data.user.created.split("T")[0];
 
-            document.getElementById('output').textContent = "Spam gönderiliyor...\n";
-            document.getElementById('stopButton').disabled = false;
-            spamInterval = setInterval(() => spamWebhook(webhookUrl, message, speed), speed);
-        }
+  document.getElementById("friends").innerText = data.counts.friends;
+  document.getElementById("followers").innerText = data.counts.followers;
+  document.getElementById("following").innerText = data.counts.following;
+  document.getElementById("groups").innerText = data.counts.groups;
+  document.getElementById("passes").innerText = data.counts.gamePasses;
 
-        // Spam işlemini durdur
-        function stopSpamming() {
-            clearInterval(spamInterval);
-            document.getElementById('stopButton').disabled = true;
-            document.getElementById('output').textContent = `Spam işlemi durduruldu. Son mesaja kadar ${count} spam gönderildi.`;
-        }
+  data.friends.forEach(f => {
+    const li = document.createElement("li");
+    li.innerText = f.name;
+    document.getElementById("friendList").appendChild(li);
+  });
 
-        // Webhook'a spam gönderme fonksiyonu
-        async function spamWebhook(url, message, speed) {
-            try {
-                const response = await fetch('/api/webhook', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ url: url, message: message, interval: speed })
-                });
+  data.groups.forEach(g => {
+    const li = document.createElement("li");
+    li.innerText = `${g.name} (${g.role})`;
+    document.getElementById("groupList").appendChild(li);
+  });
+});
+</script>
 
-                const result = await response.json();
-
-                if (result.success) {
-                    count++;
-                    document.getElementById('output').textContent = `Mesaj Sayacı: ${count}\nSpam gönderiliyor...`;
-                }
-            } catch (error) {
-                clearInterval(spamInterval); // Hata durumunda spamı durdur
-            }
-        }
-
-        // URL geçerliliği kontrolü
-        function isValidUrl(url) {
-            const regex = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+[\w.,@?^=%&:;/~+#-]*[\w@?^=%&;/~+#-]*$/;
-            return regex.test(url);
-        }
-    </script>
 </body>
 </html>
