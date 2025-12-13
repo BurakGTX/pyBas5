@@ -1,44 +1,28 @@
-import { MongoClient } from "mongodb";
+let visits = 0; // NOT: Serverless olduğu için kalıcı değil, her instance reset olabilir
 
 const USER_ID = 3380915154;
-const client = new MongoClient(process.env.MONGO_URI);
-
 const fetchJSON = (url) => fetch(url).then(r => r.json());
 
 export default async function handler(req, res) {
+  visits++; // her çağrıda arttır
+
   try {
-    // MongoDB bağlan
-    await client.connect();
-    const db = client.db("analytics");
-    const coll = db.collection("visits");
-
-    // Site ziyaret sayacı
-    const result = await coll.findOneAndUpdate(
-      { page: "index" },
-      { $inc: { count: 1 } },
-      { upsert: true, returnDocument: "after" }
-    );
-
-    // Roblox API çağrıları
+    // PROFIL
     const user = await fetchJSON(`https://users.roblox.com/v1/users/${USER_ID}`);
     const avatar = await fetchJSON(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${USER_ID}&size=420x420&format=Png`);
-    const robuxData = await fetchJSON(`https://economy.roblox.com/v1/users/${USER_ID}/currency`);
-    const friendsCount = await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/friends/count`);
-    const followersCount = await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followers/count`);
-    const followingCount = await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followings/count`);
-    const groups = await fetchJSON(`https://groups.roblox.com/v2/users/${USER_ID}/groups/roles`);
 
-    // Game Pass örnek (Inventory)
-    let passes = [];
-    let cursor = "";
-    do {
-      const inv = await fetchJSON(`https://inventory.roblox.com/v1/users/${USER_ID}/items/GamePass/34?limit=50&cursor=${cursor}`);
-      if(inv.data) passes.push(...inv.data);
-      cursor = inv.nextPageCursor;
-    } while(cursor);
+    // ROBUX
+    let robux = 0;
+    try { robux = (await fetchJSON(`https://economy.roblox.com/v1/users/${USER_ID}/currency`)).robux; } catch{}
+
+    // STAT
+    let friends = 0, followers=0, following=0, groupsCount=0;
+    try { friends = (await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/friends/count`)).count; } catch{}
+    try { followers = (await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followers/count`)).count; } catch{}
+    try { following = (await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followings/count`)).count; } catch{}
+    try { groupsCount = (await fetchJSON(`https://groups.roblox.com/v2/users/${USER_ID}/groups/roles`)).data.length; } catch{}
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-
     res.status(200).json({
       user: {
         id: user.id,
@@ -48,18 +32,22 @@ export default async function handler(req, res) {
         avatar: avatar.data[0].imageUrl
       },
       stats: {
-        robux: robuxData.robux ?? 0,
-        friends: friendsCount.count ?? 0,
-        followers: followersCount.count ?? 0,
-        following: followingCount.count ?? 0,
-        groups: groups.data.length ?? 0,
-        gamePasses: passes.length ?? 0,
-        visits: result.value.count ?? 1
+        robux,
+        friends,
+        followers,
+        following,
+        groups: groupsCount,
+        gamePasses: 0,
+        visits
       }
     });
 
   } catch (e) {
     console.error("API hata:", e);
-    res.status(500).json({ error: "API çağrısı başarısız" });
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.status(200).json({ // fallback JSON
+      user: { id: USER_ID, name:"Burakdarks", description:"", created:"2022-03-10", avatar:"" },
+      stats: { robux:0, friends:0, followers:0, following:0, groups:0, gamePasses:0, visits }
+    });
   }
 }
