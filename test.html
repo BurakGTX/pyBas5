@@ -7,13 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;color:#e5e7eb;}
-#hamburger{position:fixed;top:15px;right:15px;font-size:28px;cursor:pointer;z-index:100;}
-.menu{position:fixed;top:0;right:-400px;width:350px;height:100%;background:#1e293b;transition:0.3s;padding:20px;overflow:auto;box-shadow:-2px 0 10px rgba(0,0,0,0.5);z-index:99;}
-.menu.active{right:0;}
-.menu h3{color:#22c55e;margin-top:0;}
-#searchBtn{padding:10px 15px;border-radius:10px;border:none;background:#22c55e;color:#052e16;font-weight:600;cursor:pointer;margin-bottom:10px;}
-#searchBtn:hover{background:#16a34a;}
-#searchInput{width:100%;padding:10px;border-radius:10px;border:none;margin-bottom:10px;display:none;}
 .container{max-width:1000px;margin:auto;padding:30px;}
 .profile{display:flex; gap:25px; align-items:center; background: rgba(255,255,255,0.05); border-radius:22px; padding:25px; margin-bottom:20px;}
 .profile img{width:130px;height:130px;border-radius:18px;}
@@ -31,20 +24,11 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
 .pass-info p{margin:0;color:#94a3b8;}
 .buy-btn{padding:12px 20px;border-radius:14px;background: linear-gradient(135deg,#22c55e,#16a34a);color:#052e16;font-weight:600;transition:0.2s;}
 .buy-btn:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(34,197,94,0.35);}
-.footer{text-align:center;font-size:13px;color:#64748b;margin-top:50px;}
+.footer{text-align:center;font-size:13px;color:#64748b;margin-top:30px;}
+.visits-counter{text-align:center;font-size:16px;color:#22c55e;margin-bottom:20px;}
 </style>
 </head>
 <body>
-
-<div id="hamburger">☰</div>
-
-<div class="menu" id="menu">
-  <h3>Roblox Kullanıcı Ara</h3>
-  <button id="searchBtn" onclick="toggleInput()">Ara</button>
-  <input type="text" id="searchInput" placeholder="ID girin...">
-  
-  <div id="menuContent" style="display:none;margin-top:15px;"></div>
-</div>
 
 <div class="container">
   <h2>Profilim</h2>
@@ -65,6 +49,8 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
     <div class="stat"><span>🎟️ Game Pass</span><strong id="passes">0</strong></div>
     <div class="stat"><span>👁️ Ziyaretçi</span><strong id="visits">0</strong></div>
   </div>
+
+  <div class="visits-counter">Siteyi ziyaret eden kişi sayısı: <strong id="visitorCount">0</strong></div>
 
   <div class="passes">
     <h2>🎟️ Game Pass'ler</h2>
@@ -92,63 +78,30 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
 </div>
 
 <script>
-const USER_ID="3380915154";
+const USER_ID = "3380915154";
 
-const hamburger=document.getElementById("hamburger");
-const menu=document.getElementById("menu");
-const searchInput=document.getElementById("searchInput");
-const menuContent=document.getElementById("menuContent");
+function capVisits(v){ return v>1000?1000:v; }
 
-hamburger.addEventListener("click",()=>menu.classList.toggle("active"));
+fetch(`https://lyrox.vercel.app/api/server?userId=${USER_ID}`)
+.then(r=>r.json())
+.then(data=>{
+  const s = data.stats || {};
+  document.getElementById("avatar").src = data.user.avatar;
+  document.getElementById("name").innerText = data.user.name;
+  document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
+  document.getElementById("created").innerText = "Hesap: "+data.user.created.split("T")[0];
 
-function toggleInput(){
-  searchInput.style.display = searchInput.style.display==="block"?"none":"block";
-}
+  document.getElementById("robux").innerText = (s.robux||0).toLocaleString();
+  document.getElementById("friends").innerText = s.friends||0;
+  document.getElementById("followers").innerText = s.followers||0;
+  document.getElementById("following").innerText = s.following||0;
+  document.getElementById("groups").innerText = s.groups||0;
+  document.getElementById("passes").innerText = s.gamePasses||0;
+  document.getElementById("visits").innerText = capVisits(s.visits||0);
 
-function capVisits(v){return v>1000?1000:v;}
-
-function fillProfile(data,container){
-  const s=data.stats||{};
-  container.innerHTML = `
-    <div class="profile">
-      <img src="${data.user.avatar||''}">
-      <div class="profile-info">
-        <h3>${data.user.name||'Bilinmiyor'}</h3>
-        <p>${data.user.description||'Açıklama yok'}</p>
-        <p>Hesap: ${data.user.created?.split("T")[0]||'Bilinmiyor'}</p>
-      </div>
-    </div>
-    <div class="stats">
-      <div class="stat"><span>💰 Robux</span><strong>${(s.robux||0).toLocaleString()}</strong></div>
-      <div class="stat"><span>👥 Arkadaş</span><strong>${s.friends||0}</strong></div>
-      <div class="stat"><span>⭐ Takipçi</span><strong>${s.followers||0}</strong></div>
-      <div class="stat"><span>➡️ Takip</span><strong>${s.following||0}</strong></div>
-      <div class="stat"><span>👪 Gruplar</span><strong>${s.groups||0}</strong></div>
-      <div class="stat"><span>🎟️ Game Pass</span><strong>${s.gamePasses||0}</strong></div>
-      <div class="stat"><span>👁️ Ziyaretçi</span><strong>${capVisits(s.visits||0)}</strong></div>
-    </div>
-  `;
-}
-
-function fetchProfile(id,callback){
-  fetch(`https://lyrox.vercel.app/api/server?userId=${id}`)
-  .then(r=>r.json())
-  .then(data=>{ if(callback) callback(data); })
-  .catch(err=>console.error("API hata:",err));
-}
-
-// Ana profil yükle
-fetchProfile(USER_ID,data=>{
-  fillProfile(data,document.querySelector(".container"));
-});
-
-// Menü arama
-function searchUser(){
-  const id=searchInput.value.trim();
-  if(!id) return alert("Lütfen ID girin!");
-  fetchProfile(id,data=>fillProfile(data,menuContent));
-  menuContent.style.display="block";
-}
+  document.getElementById("visitorCount").innerText = capVisits(s.visits||0);
+})
+.catch(err=>console.error("API hata:",err));
 </script>
 </body>
 </html>
