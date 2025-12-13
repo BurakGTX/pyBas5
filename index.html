@@ -2,142 +2,66 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Burakdarks | Roblox Profil</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>Burakdarks | Roblox Profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-body {
-  margin: 0;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #0f172a, #020617);
-  color: #e5e7eb;
-}
-
-.container {
-  max-width: 900px;
-  margin: auto;
-  padding: 40px 20px;
-}
+/* RESET & BODY */
+body, html {margin:0;padding:0; font-family: 'Inter', sans-serif; background: #0f172a; color:#e5e7eb;}
+.container {max-width: 1000px; margin:auto; padding:30px;}
+h2 {margin-bottom:20px;}
+a {text-decoration:none;}
 
 /* PROFIL */
-.profile {
-  display: flex;
-  gap: 25px;
-  align-items: center;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(14px);
-  border-radius: 22px;
-  padding: 25px;
-}
-
-.profile img {
-  width: 130px;
-  height: 130px;
-  border-radius: 18px;
-}
-
-.profile h1 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.profile p {
-  margin: 6px 0 0;
-  color: #94a3b8;
-}
+.profile {display:flex; gap:25px; align-items:center; background: rgba(255,255,255,0.05); backdrop-filter: blur(14px); border-radius:22px; padding:25px; margin-bottom:30px;}
+.profile img {width:130px; height:130px; border-radius:18px;}
+.profile h1 {margin:0; font-size:28px;}
+.profile p {margin:5px 0 0; color:#94a3b8;}
 
 /* STATS */
-.stats {
-  margin-top: 30px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 18px;
-}
+.stats {display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:18px; margin-bottom:40px;}
+.stat {background: rgba(255,255,255,0.05); border-radius:18px; padding:18px; text-align:center; transition:0.3s;}
+.stat:hover {transform: translateY(-4px); box-shadow:0 10px 25px rgba(34,197,94,0.35);}
+.stat span {font-size:14px; color:#94a3b8;}
+.stat strong {display:block; margin-top:6px; font-size:22px;}
 
-.stat {
-  background: rgba(255,255,255,0.05);
-  border-radius: 18px;
-  padding: 18px;
-  text-align: center;
-}
+/* GAME PASSES */
+.passes {margin-bottom:40px;}
+.pass-card {display:flex; align-items:center; gap:20px; background: rgba(255,255,255,0.05); border-radius:22px; padding:20px; margin-bottom:20px; transition:0.3s;}
+.pass-card img {width:120px; height:120px; border-radius:16px;}
+.pass-info {flex:1;}
+.pass-info h3 {margin:0 0 6px;}
+.pass-info p {margin:0; color:#94a3b8;}
+.buy-btn {padding:12px 20px; border-radius:14px; background: linear-gradient(135deg, #22c55e, #16a34a); color:#052e16; font-weight:600; transition:0.2s;}
+.buy-btn:hover {transform: translateY(-2px); box-shadow:0 10px 25px rgba(34,197,94,0.35);}
 
-.stat span {
-  font-size: 14px;
-  color: #94a3b8;
-}
+/* OYUNLAR */
+.games {margin-bottom:40px;}
+.game-card {display:flex; align-items:center; gap:15px; background: rgba(255,255,255,0.05); padding:15px; border-radius:16px; transition:0.3s;}
+.game-card img {width:80px; height:80px; border-radius:12px;}
+.game-card:hover {transform: translateY(-3px); box-shadow:0 8px 20px rgba(34,197,94,0.3);}
+.game-info h4 {margin:0 0 4px; font-size:16px;}
+.game-info p {margin:0; font-size:13px; color:#94a3b8;}
 
-.stat strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 22px;
-}
+/* FAVORITES */
+.favorites {margin-bottom:40px;}
+.fav-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:15px;}
+.fav-grid img {width:100%; border-radius:12px; transition:0.2s;}
+.fav-grid img:hover {transform:scale(1.05);}
 
-/* PASSES */
-.passes {
-  margin-top: 45px;
-}
-
-.passes h2 {
-  margin-bottom: 20px;
-}
-
-.pass-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 22px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.pass-card img {
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-}
-
-.pass-info {
-  flex: 1;
-}
-
-.pass-info h3 {
-  margin: 0 0 6px;
-}
-
-.pass-info p {
-  margin: 0;
-  color: #94a3b8;
-}
-
-.buy-btn {
-  padding: 12px 20px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #052e16;
-  font-weight: 600;
-  text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.buy-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(34,197,94,0.35);
-}
+/* DARK / NEON SWITCH */
+.theme-switch {position:fixed; top:20px; right:20px; cursor:pointer; background:#16a34a; padding:10px 15px; border-radius:12px; font-weight:600; transition:0.2s; color:#052e16;}
+.theme-switch:hover {background:#22c55e;}
 
 /* FOOTER */
-.footer {
-  margin-top: 50px;
-  text-align: center;
-  font-size: 13px;
-  color: #64748b;
-}
+.footer {text-align:center; font-size:13px; color:#64748b; margin-top:50px;}
 </style>
 </head>
 <body>
 
-<div class="container">
+<div class="theme-switch" onclick="toggleTheme()">Dark/Neon</div>
 
+<div class="container">
   <!-- PROFIL -->
   <div class="profile">
     <img id="avatar" src="">
@@ -168,10 +92,7 @@ body {
         <h3>Hi Thanks</h3>
         <p>Desteğin için teşekkür ederim 💚</p>
       </div>
-      <a class="buy-btn" target="_blank"
-         href="https://www.roblox.com/tr/game-pass/1618375242/Hi-Thanks">
-        Satın Al
-      </a>
+      <a class="buy-btn" target="_blank" href="https://www.roblox.com/tr/game-pass/1618375242/Hi-Thanks">Satın Al</a>
     </div>
 
     <div class="pass-card">
@@ -180,30 +101,47 @@ body {
         <h3>Unnamed</h3>
         <p>Profil desteği Game Pass</p>
       </div>
-      <a class="buy-btn" target="_blank"
-         href="https://www.roblox.com/tr/game-pass/38547236/unnamed">
-        Satın Al
-      </a>
+      <a class="buy-btn" target="_blank" href="https://www.roblox.com/tr/game-pass/38547236/unnamed">Satın Al</a>
     </div>
+  </div>
+
+  <!-- OYUNLAR -->
+  <div class="games">
+    <h2>🎮 Oyun Koleksiyonu</h2>
+    <div id="gameList"></div>
+  </div>
+
+  <!-- FAVORİ ASSETLER -->
+  <div class="favorites">
+    <h2>✨ Favori Assetler</h2>
+    <div class="fav-grid" id="favAssets"></div>
   </div>
 
   <div class="footer">
     © Burakdarks • Roblox Profil Sayfası
   </div>
-
 </div>
 
 <script>
+// TEMAYI DEĞİŞTİR
+function toggleTheme(){
+  document.body.classList.toggle("neon");
+  if(document.body.classList.contains("neon")){
+    document.body.style.background = "radial-gradient(circle at top, #0f172a, #0a0a20)";
+  } else {
+    document.body.style.background = "radial-gradient(circle at top, #0f172a, #020617)";
+  }
+}
+
+// API VERİLERİNİ ÇEK
 fetch("https://lyrox.vercel.app/api/roblox")
   .then(r => r.json())
   .then(data => {
     const s = data.stats || {};
-
     document.getElementById("avatar").src = data.user.avatar;
     document.getElementById("name").innerText = data.user.name;
     document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
-    document.getElementById("created").innerText =
-      "Hesap: " + data.user.created.split("T")[0];
+    document.getElementById("created").innerText = "Hesap: " + data.user.created.split("T")[0];
 
     document.getElementById("robux").innerText = Number(s.robux ?? 0).toLocaleString();
     document.getElementById("friends").innerText = Number(s.friends ?? 0);
@@ -211,8 +149,35 @@ fetch("https://lyrox.vercel.app/api/roblox")
     document.getElementById("following").innerText = Number(s.following ?? 0);
     document.getElementById("groups").innerText = Number(s.groups ?? 0);
     document.getElementById("passes").innerText = Number(s.gamePasses ?? 0);
-  })
-  .catch(err => console.error("API hata:", err));
+
+    // OYUNLAR ÖRNEK
+    const gameList = document.getElementById("gameList");
+    const sampleGames = [
+      {img:"https://tr.rbxcdn.com/5f26d6d3d9baf5ec2f2466e0284f3e32/150/150/Image/Png/noFilter", name:"Adopt Me!", plays:"1.2M"},
+      {img:"https://tr.rbxcdn.com/2e10f923f8a2c4c85e1e1c02b1e4bc30/150/150/Image/Png/noFilter", name:"Bloxburg", plays:"850K"},
+      {img:"https://tr.rbxcdn.com/5c4d1f58d50e8c0e61c2ecfa2f6f57f6/150/150/Image/Png/noFilter", name:"Tower of Hell", plays:"430K"}
+    ];
+    sampleGames.forEach(g=>{
+      const div=document.createElement("div"); div.className="game-card";
+      div.innerHTML=`<img src="${g.img}"><div class="game-info"><h4>${g.name}</h4><p>${g.plays} oynanma</p></div>`;
+      gameList.appendChild(div);
+    });
+
+    // FAVORİ ASSETLER ÖRNEK
+    const favAssets = document.getElementById("favAssets");
+    const sampleAssets = [
+      "https://tr.rbxcdn.com/89f1a85e5c1b8d11d0b97f0aee3a3f9f/100/100/Image/Png/noFilter",
+      "https://tr.rbxcdn.com/3b8d9c5a6f0c8b2d0f987c1e4b3a2f5a/100/100/Image/Png/noFilter",
+      "https://tr.rbxcdn.com/4e5b8f2c5a0b1c9d2f987c4e5b2d1f9c/100/100/Image/Png/noFilter",
+      "https://tr.rbxcdn.com/1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p/100/100/Image/Png/noFilter"
+    ];
+    sampleAssets.forEach(url=>{
+      const img = document.createElement("img");
+      img.src = url;
+      favAssets.appendChild(img);
+    });
+
+  }).catch(err=>console.error("API hata:", err));
 </script>
 
 </body>
