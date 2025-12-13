@@ -4,21 +4,27 @@ export default async function handler(req, res) {
   try {
     const fetchJSON = (url) => fetch(url).then(r => r.json());
 
-    const user = await fetchJSON(`https://users.roblox.com/v1/users/${USER_ID}`);
+    const user = await fetchJSON(
+      `https://users.roblox.com/v1/users/${USER_ID}`
+    );
 
     const avatar = await fetchJSON(
       `https://thumbnails.roblox.com/v1/users/avatar?userIds=${USER_ID}&size=420x420&format=Png`
     );
 
-    const friends = await fetchJSON(
-      `https://friends.roblox.com/v1/users/${USER_ID}/friends`
+    const robuxData = await fetchJSON(
+      `https://economy.roblox.com/v1/users/${USER_ID}/currency`
     );
 
-    const followers = await fetchJSON(
+    const friendsCount = await fetchJSON(
+      `https://friends.roblox.com/v1/users/${USER_ID}/friends/count`
+    );
+
+    const followersCount = await fetchJSON(
       `https://friends.roblox.com/v1/users/${USER_ID}/followers/count`
     );
 
-    const following = await fetchJSON(
+    const followingCount = await fetchJSON(
       `https://friends.roblox.com/v1/users/${USER_ID}/followings/count`
     );
 
@@ -46,21 +52,17 @@ export default async function handler(req, res) {
         created: user.created,
         avatar: avatar.data[0].imageUrl
       },
-      counts: {
-        friends: friends.data.length,
-        followers: followers.count,
-        following: following.count,
+      stats: {
+        robux: robuxData.robux,
+        friends: friendsCount.count,
+        followers: followersCount.count,
+        following: followingCount.count,
         groups: groups.data.length,
         gamePasses: passes.length
-      },
-      friends: friends.data.slice(0, 10), // ilk 10 arkadaş
-      groups: groups.data.map(g => ({
-        name: g.group.name,
-        role: g.role.name
-      }))
+      }
     });
 
   } catch (e) {
-    res.status(500).json({ error: "Roblox API hata verdi" });
+    res.status(500).json({ error: "Roblox API error" });
   }
 }
