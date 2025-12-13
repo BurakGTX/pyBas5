@@ -24,6 +24,7 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
 .pass-info p{margin:0;color:#94a3b8;}
 .buy-btn{padding:12px 20px;border-radius:14px;background: linear-gradient(135deg,#22c55e,#16a34a);color:#052e16;font-weight:600;transition:0.2s;}
 .buy-btn:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(34,197,94,0.35);}
+.visits-counter{text-align:center;font-size:16px;color:#22c55e;margin-bottom:20px;}
 .footer{text-align:center;font-size:13px;color:#64748b;margin-top:30px;}
 </style>
 </head>
@@ -68,6 +69,8 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
     </div>
   </div>
 
+  <div class="visits-counter">Bu siteyi toplam <strong id="visitorCount">0</strong> kişi ziyaret etti.</div>
+
   <div class="footer">
     © Burakdarks • Roblox Profil Sayfası
   </div>
@@ -76,7 +79,7 @@ body, html{margin:0;padding:0;font-family:'Inter',sans-serif;background:#0f172a;
 <script>
 const USER_ID="3380915154";
 
-// Profil verilerini çek
+// 1. profil verilerini çek
 fetch(`https://lyrox.vercel.app/api/server?userId=${USER_ID}`)
 .then(r=>r.json())
 .then(data=>{
@@ -93,7 +96,8 @@ fetch(`https://lyrox.vercel.app/api/server?userId=${USER_ID}`)
   document.getElementById("groups").innerText = s.groups||0;
   document.getElementById("passes").innerText = s.gamePasses||0;
 
-  // visits sadece server tarafında arttı, frontend göremez
+  // ziyaretçi sayısını frontend’de göster (backend’den geliyor)
+  document.getElementById("visitorCount").innerText = s.visits || 1;
 })
 .catch(err=>console.error("API hata:",err));
 </script>
