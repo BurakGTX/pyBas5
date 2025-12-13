@@ -99,20 +99,30 @@ body {
 fetch("https://lyrox.vercel.app/api/roblox")
   .then(r => r.json())
   .then(data => {
+
+    const stats = data.stats || {};
+
+    const robux = Number(stats.robux ?? 0);
+    const friends = Number(stats.friends ?? 0);
+    const followers = Number(stats.followers ?? 0);
+    const following = Number(stats.following ?? 0);
+    const groups = Number(stats.groups ?? 0);
+    const passes = Number(stats.gamePasses ?? 0);
+
     document.getElementById("avatar").src = data.user.avatar;
     document.getElementById("name").innerText = data.user.name;
     document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
     document.getElementById("created").innerText =
       "Hesap: " + data.user.created.split("T")[0];
 
-    document.getElementById("robux").innerText = data.stats.robux.toLocaleString();
-    document.getElementById("friends").innerText = data.stats.friends;
-    document.getElementById("followers").innerText = data.stats.followers;
-    document.getElementById("following").innerText = data.stats.following;
-    document.getElementById("groups").innerText = data.stats.groups;
-    document.getElementById("passes").innerText = data.stats.gamePasses;
+    document.getElementById("robux").innerText = robux.toLocaleString();
+    document.getElementById("friends").innerText = friends.toLocaleString();
+    document.getElementById("followers").innerText = followers.toLocaleString();
+    document.getElementById("following").innerText = following.toLocaleString();
+    document.getElementById("groups").innerText = groups.toLocaleString();
+    document.getElementById("passes").innerText = passes.toLocaleString();
+  })
+  .catch(err => {
+    console.error("API okunamadı:", err);
   });
 </script>
-
-</body>
-</html>
