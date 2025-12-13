@@ -2,65 +2,132 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Profil</title>
+<title>Burakdarks | Roblox Profil</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: radial-gradient(circle at top, #0f172a, #020617);
   color: #e5e7eb;
 }
+
 .container {
   max-width: 900px;
   margin: auto;
   padding: 40px 20px;
 }
+
+/* PROFIL */
 .profile {
   display: flex;
   gap: 25px;
   align-items: center;
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  border-radius: 22px;
   padding: 25px;
 }
+
 .profile img {
   width: 130px;
   height: 130px;
-  border-radius: 16px;
+  border-radius: 18px;
 }
+
 .profile h1 {
   margin: 0;
   font-size: 28px;
 }
+
 .profile p {
   margin: 6px 0 0;
   color: #94a3b8;
 }
+
+/* STATS */
 .stats {
   margin-top: 30px;
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 18px;
 }
+
 .stat {
   background: rgba(255,255,255,0.05);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 18px;
+  padding: 18px;
   text-align: center;
 }
+
 .stat span {
   font-size: 14px;
   color: #94a3b8;
 }
+
 .stat strong {
   display: block;
   margin-top: 6px;
   font-size: 22px;
 }
+
+/* PASSES */
+.passes {
+  margin-top: 45px;
+}
+
+.passes h2 {
+  margin-bottom: 20px;
+}
+
+.pass-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 22px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.pass-card img {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+}
+
+.pass-info {
+  flex: 1;
+}
+
+.pass-info h3 {
+  margin: 0 0 6px;
+}
+
+.pass-info p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.buy-btn {
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #052e16;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.buy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(34,197,94,0.35);
+}
+
+/* FOOTER */
 .footer {
-  margin-top: 40px;
+  margin-top: 50px;
   text-align: center;
   font-size: 13px;
   color: #64748b;
@@ -71,26 +138,57 @@ body {
 
 <div class="container">
 
+  <!-- PROFIL -->
   <div class="profile">
-    <img id="avatar">
+    <img id="avatar" src="">
     <div>
-      <h1 id="name"></h1>
+      <h1 id="name">Yükleniyor...</h1>
       <p id="desc"></p>
       <p id="created"></p>
     </div>
   </div>
 
+  <!-- STATS -->
   <div class="stats">
-    <div class="stat"><span>💰 Robux</span><strong id="robux"></strong></div>
-    <div class="stat"><span>👥 Arkadaş</span><strong id="friends"></strong></div>
-    <div class="stat"><span>⭐ Takipçi</span><strong id="followers"></strong></div>
-    <div class="stat"><span>➡️ Takip</span><strong id="following"></strong></div>
-    <div class="stat"><span>👪 Gruplar</span><strong id="groups"></strong></div>
-    <div class="stat"><span>🎟️ Game Pass</span><strong id="passes"></strong></div>
+    <div class="stat"><span>💰 Robux</span><strong id="robux">0</strong></div>
+    <div class="stat"><span>👥 Arkadaş</span><strong id="friends">0</strong></div>
+    <div class="stat"><span>⭐ Takipçi</span><strong id="followers">0</strong></div>
+    <div class="stat"><span>➡️ Takip</span><strong id="following">0</strong></div>
+    <div class="stat"><span>👪 Gruplar</span><strong id="groups">0</strong></div>
+    <div class="stat"><span>🎟️ Game Pass</span><strong id="passes">0</strong></div>
+  </div>
+
+  <!-- GAME PASSES -->
+  <div class="passes">
+    <h2>🎟️ Game Pass'ler</h2>
+
+    <div class="pass-card">
+      <img src="https://tr.rbxcdn.com/180DAY-b0213e45ce301a9670822682857df7a9/420/420/Image/Png/noFilter">
+      <div class="pass-info">
+        <h3>Hi Thanks</h3>
+        <p>Desteğin için teşekkür ederim 💚</p>
+      </div>
+      <a class="buy-btn" target="_blank"
+         href="https://www.roblox.com/tr/game-pass/1618375242/Hi-Thanks">
+        Satın Al
+      </a>
+    </div>
+
+    <div class="pass-card">
+      <img src="https://tr.rbxcdn.com/180DAY-2cd7f246a3a03278f469a272a979a003/420/420/Image/Png/noFilter">
+      <div class="pass-info">
+        <h3>Unnamed</h3>
+        <p>Profil desteği Game Pass</p>
+      </div>
+      <a class="buy-btn" target="_blank"
+         href="https://www.roblox.com/tr/game-pass/38547236/unnamed">
+        Satın Al
+      </a>
+    </div>
   </div>
 
   <div class="footer">
-    Roblox Public Profile • Otomatik güncellenir
+    © Burakdarks • Roblox Profil Sayfası
   </div>
 
 </div>
@@ -99,15 +197,7 @@ body {
 fetch("https://lyrox.vercel.app/api/roblox")
   .then(r => r.json())
   .then(data => {
-
-    const stats = data.stats || {};
-
-    const robux = Number(stats.robux ?? 0);
-    const friends = Number(stats.friends ?? 0);
-    const followers = Number(stats.followers ?? 0);
-    const following = Number(stats.following ?? 0);
-    const groups = Number(stats.groups ?? 0);
-    const passes = Number(stats.gamePasses ?? 0);
+    const s = data.stats || {};
 
     document.getElementById("avatar").src = data.user.avatar;
     document.getElementById("name").innerText = data.user.name;
@@ -115,14 +205,15 @@ fetch("https://lyrox.vercel.app/api/roblox")
     document.getElementById("created").innerText =
       "Hesap: " + data.user.created.split("T")[0];
 
-    document.getElementById("robux").innerText = robux.toLocaleString();
-    document.getElementById("friends").innerText = friends.toLocaleString();
-    document.getElementById("followers").innerText = followers.toLocaleString();
-    document.getElementById("following").innerText = following.toLocaleString();
-    document.getElementById("groups").innerText = groups.toLocaleString();
-    document.getElementById("passes").innerText = passes.toLocaleString();
+    document.getElementById("robux").innerText = Number(s.robux ?? 0).toLocaleString();
+    document.getElementById("friends").innerText = Number(s.friends ?? 0);
+    document.getElementById("followers").innerText = Number(s.followers ?? 0);
+    document.getElementById("following").innerText = Number(s.following ?? 0);
+    document.getElementById("groups").innerText = Number(s.groups ?? 0);
+    document.getElementById("passes").innerText = Number(s.gamePasses ?? 0);
   })
-  .catch(err => {
-    console.error("API okunamadı:", err);
-  });
+  .catch(err => console.error("API hata:", err));
 </script>
+
+</body>
+</html>
