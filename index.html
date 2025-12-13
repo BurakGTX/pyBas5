@@ -2,105 +2,116 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Profil Paneli</title>
+<title>Roblox Profil</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: #fff;
+  font-family: "Inter", system-ui, sans-serif;
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: #e5e7eb;
 }
 .container {
-  max-width: 1000px;
+  max-width: 900px;
   margin: auto;
-  padding: 30px;
-}
-.card {
-  background: #1e293b;
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 40px 20px;
 }
 .profile {
   display: flex;
-  gap: 20px;
+  gap: 25px;
   align-items: center;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 25px;
 }
 .profile img {
-  width: 120px;
-  border-radius: 12px;
+  width: 130px;
+  height: 130px;
+  border-radius: 16px;
 }
-.grid {
+.profile h1 {
+  margin: 0;
+  font-size: 28px;
+}
+.profile p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+}
+.stats {
+  margin-top: 30px;
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+  gap: 20px;
 }
-.box {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
+.stat {
+  background: rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 20px;
   text-align: center;
+}
+.stat span {
+  font-size: 14px;
+  color: #94a3b8;
+}
+.stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+}
+.footer {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
 }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="card profile">
+
+  <div class="profile">
     <img id="avatar">
     <div>
       <h1 id="name"></h1>
       <p id="desc"></p>
-      <small id="created"></small>
+      <p id="created"></p>
     </div>
   </div>
 
-  <div class="card grid">
-    <div class="box">👥 Arkadaş<br><b id="friends"></b></div>
-    <div class="box">⭐ Takipçi<br><b id="followers"></b></div>
-    <div class="box">➡️ Takip<br><b id="following"></b></div>
-    <div class="box">👪 Gruplar<br><b id="groups"></b></div>
-    <div class="box">🎟️ Game Pass<br><b id="passes"></b></div>
+  <div class="stats">
+    <div class="stat"><span>💰 Robux</span><strong id="robux"></strong></div>
+    <div class="stat"><span>👥 Arkadaş</span><strong id="friends"></strong></div>
+    <div class="stat"><span>⭐ Takipçi</span><strong id="followers"></strong></div>
+    <div class="stat"><span>➡️ Takip</span><strong id="following"></strong></div>
+    <div class="stat"><span>👪 Gruplar</span><strong id="groups"></strong></div>
+    <div class="stat"><span>🎟️ Game Pass</span><strong id="passes"></strong></div>
   </div>
 
-  <div class="card">
-    <h2>👥 Arkadaşlar (ilk 10)</h2>
-    <ul id="friendList"></ul>
+  <div class="footer">
+    Roblox Public Profile • Otomatik güncellenir
   </div>
 
-  <div class="card">
-    <h2>👪 Gruplar</h2>
-    <ul id="groupList"></ul>
-  </div>
 </div>
 
 <script>
 fetch("https://lyrox.vercel.app/api/roblox")
-.then(r => r.json())
-.then(data => {
-  document.getElementById("avatar").src = data.user.avatar;
-  document.getElementById("name").innerText = data.user.name;
-  document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
-  document.getElementById("created").innerText = "Hesap: " + data.user.created.split("T")[0];
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("avatar").src = data.user.avatar;
+    document.getElementById("name").innerText = data.user.name;
+    document.getElementById("desc").innerText = data.user.description || "Açıklama yok";
+    document.getElementById("created").innerText =
+      "Hesap: " + data.user.created.split("T")[0];
 
-  document.getElementById("friends").innerText = data.counts.friends;
-  document.getElementById("followers").innerText = data.counts.followers;
-  document.getElementById("following").innerText = data.counts.following;
-  document.getElementById("groups").innerText = data.counts.groups;
-  document.getElementById("passes").innerText = data.counts.gamePasses;
-
-  data.friends.forEach(f => {
-    const li = document.createElement("li");
-    li.innerText = f.name;
-    document.getElementById("friendList").appendChild(li);
+    document.getElementById("robux").innerText = data.stats.robux.toLocaleString();
+    document.getElementById("friends").innerText = data.stats.friends;
+    document.getElementById("followers").innerText = data.stats.followers;
+    document.getElementById("following").innerText = data.stats.following;
+    document.getElementById("groups").innerText = data.stats.groups;
+    document.getElementById("passes").innerText = data.stats.gamePasses;
   });
-
-  data.groups.forEach(g => {
-    const li = document.createElement("li");
-    li.innerText = `${g.name} (${g.role})`;
-    document.getElementById("groupList").appendChild(li);
-  });
-});
 </script>
 
 </body>
