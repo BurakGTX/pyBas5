@@ -3,50 +3,60 @@ export default async function handler(req, res) {
 
   try {
     // PROFİL
-    const userRes = await fetch(
+    const user = await fetch(
       `https://users.roblox.com/v1/users/${USER_ID}`
-    );
-    const user = await userRes.json();
+    ).then(r => r.json());
 
-    // ROBUX
-    const robuxRes = await fetch(
-      `https://economy.roblox.com/v1/users/${USER_ID}/currency`
-    );
-    const robux = await robuxRes.json();
+    // AVATAR
+    const avatar = await fetch(
+      `https://thumbnails.roblox.com/v1/users/avatar?userIds=${USER_ID}&size=420x420&format=Png`
+    ).then(r => r.json());
 
-    // GAME PASS
+    // GAME PASS (OLUŞTURULAN)
     let passes = [];
     let cursor = "";
 
     do {
-      const invRes = await fetch(
+      const inv = await fetch(
         `https://inventory.roblox.com/v1/users/${USER_ID}/items/GamePass/34?limit=50&cursor=${cursor}`
-      );
-      const inv = await invRes.json();
+      ).then(r => r.json());
 
       if (inv.data) passes.push(...inv.data);
       cursor = inv.nextPageCursor;
     } while (cursor);
 
-    // CORS AÇ
+    // PASS DETAYLARI (FİYAT)
+    const detailedPasses = await Promise.all(
+      passes.map(async p => {
+        const d = await fetch(
+          `https://economy.roblox.com/v1/assets/${p.assetId}/details`
+        ).then(r => r.json());
+
+        return {
+          id: p.assetId,
+          name: d.Name,
+          price: d.PriceInRobux,
+          forSale: d.IsForSale
+        };
+      })
+    );
+
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    // JSON RESPONSE
     res.status(200).json({
       user: {
         id: user.id,
         name: user.name,
         description: user.description,
-        created: user.created
+        created: user.created,
+        avatar: avatar.data[0].imageUrl
       },
-      robux: robux.robux ?? 0,
-      gamePassCount: passes.length,
-      gamePasses: passes
+      robux: "PRIVATE (Roblox API kısıtı)",
+      gamePassCount: detailedPasses.length,
+      gamePasses: detailedPasses
     });
 
-  } catch (err) {
-    res.status(500).json({
-      error: "Roblox API erişim hatası"
-    });
+  } catch (e) {
+    res.status(500).json({ error: "Roblox API hata verdi" });
   }
 }
