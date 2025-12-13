@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burakdarks | Roblox Profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body, html {margin:0;padding:0; font-family: 'Inter', sans-serif; background:#0f172a; color:#e5e7eb;}
+.container {max-width:1000px;margin:auto;padding:30px;}
+h2{margin-bottom:20px;}
+a{text-decoration:none;}
+.profile {display:flex; gap:25px; align-items:center; background: rgba(255,255,255,0.05); backdrop-filter: blur(14px); border-radius:22px; padding:25px; margin-bottom:30px;}
+.profile img {width:130px;height:130px;border-radius:18px;}
+.profile h1 {margin:0;font-size:28px;}
+.profile p {margin:5px 0 0;color:#94a3b8;}
+.stats {display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;margin-bottom:40px;}
+.stat {background: rgba(255,255,255,0.05); border-radius:18px; padding:18px; text-align:center; transition:0.3s;}
+.stat:hover{transform:translateY(-4px); box-shadow:0 10px 25px rgba(34,197,94,0.35);}
+.stat span{font-size:14px;color:#94a3b8;}
+.stat strong{display:block;margin-top:6px;font-size:22px;}
+.passes{margin-bottom:40px;}
+.pass-card{display:flex;align-items:center;gap:20px;background: rgba(255,255,255,0.05);border-radius:22px;padding:20px;margin-bottom:20px;transition:0.3s;}
+.pass-card img{width:120px;height:120px;border-radius:16px;}
+.pass-info{flex:1;}
+.pass-info h3{margin:0 0 6px;}
+.pass-info p{margin:0;color:#94a3b8;}
+.buy-btn{padding:12px 20px;border-radius:14px;background: linear-gradient(135deg,#22c55e,#16a34a);color:#052e16;font-weight:600;transition:0.2s;}
+.buy-btn:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(34,197,94,0.35);}
+.footer{text-align:center;font-size:13px;color:#64748b;margin-top:50px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="profile">
+    <img id="avatar" src="">
+    <div>
+      <h1 id="name">Yükleniyor...</h1>
+      <p id="desc"></p>
+      <p id="created"></p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span>💰 Robux</span><strong id="robux">0</strong></div>
+    <div class="stat"><span>👥 Arkadaş</span><strong id="friends">0</strong></div>
+    <div class="stat"><span>⭐ Takipçi</span><strong id="followers">0</strong></div>
+    <div class="stat"><span>➡️ Takip</span><strong id="following">0</strong></div>
+    <div class="stat"><span>👪 Gruplar</span><strong id="groups">0</strong></div>
+    <div class="stat"><span>🎟️ Game Pass</span><strong id="passes">0</strong></div>
+    <div class="stat"><span>👁️ Ziyaretçi</span><strong id="visits">0</strong></div>
+  </div>
+
+  <div class="passes">
+    <h2>🎟️ Game Pass'ler</h2>
+    <div class="pass-card">
+      <img src="https://tr.rbxcdn.com/180DAY-b0213e45ce301a9670822682857df7a9/420/420/Image/Png/noFilter">
+      <div class="pass-info">
+        <h3>Hi Thanks</h3>
+        <p>Desteğin için teşekkür ederim 💚</p>
+      </div>
+      <a class="buy-btn" target="_blank" href="https://www.roblox.com/tr/game-pass/1618375242/Hi-Thanks">Satın Al</a>
+    </div>
+    <div class="pass-card">
+      <img src="https://tr.rbxcdn.com/180DAY-2cd7f246a3a03278f469a272a979a003/420/420/Image/Png/noFilter">
+      <div class="pass-info">
+        <h3>Unnamed</h3>
+        <p>Profil desteği Game Pass</p>
+      </div>
+      <a class="buy-btn" target="_blank" href="https://www.roblox.com/tr/game-pass/38547236/unnamed">Satın Al</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    © Burakdarks • Roblox Profil Sayfası
+  </div>
+</div>
+
+<script>
+fetch("https://lyrox.vercel.app/api/server")
+.then(r=>r.json())
+.then(data=>{
+  const s=data.stats || {};
+  document.getElementById("avatar").src=data.user.avatar;
+  document.getElementById("name").innerText=data.user.name;
+  document.getElementById("desc").innerText=data.user.description||"Açıklama yok";
+  document.getElementById("created").innerText="Hesap: "+data.user.created.split("T")[0];
+  document.getElementById("robux").innerText=(s.robux??0).toLocaleString();
+  document.getElementById("friends").innerText=s.friends??0;
+  document.getElementById("followers").innerText=s.followers??0;
+  document.getElementById("following").innerText=s.following??0;
+  document.getElementById("groups").innerText=s.groups??0;
+  document.getElementById("passes").innerText=s.gamePasses??0;
+  document.getElementById("visits").innerText=s.visits??1;
+})
+.catch(err=>console.error("API hata:", err));
+</script>
+</body>
+</html>
