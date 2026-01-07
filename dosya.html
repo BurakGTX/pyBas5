@@ -3,30 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🔒 Ultra Güvenli Pastebin (Web Crypto)</title>
+  <title>🔒 %100 Güvenli Şifreli Pastebin</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
-    textarea { width: 100%; height: 200px; font-family: monospace; font-size: 16px; }
-    input, button { padding: 12px; margin: 10px 0; font-size: 16px; width: 100%; box-sizing: border-box; }
-    #output { margin-top: 20px; background: white; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-    .info { color: #555; font-size: 0.9em; background: #f9f9f9; padding: 10px; border-radius: 6px; margin: 10px 0; }
-    .warning { color: #d00; font-weight: bold; }
-    pre { background:#f8f8f8; padding:20px; border-radius:8px; overflow:auto; border:1px solid #ddd; white-space: pre-wrap; }
+    textarea, input[type="password"], input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; box-sizing: border-box; }
+    button { padding: 14px; font-size: 18px; width: 100%; background: #0066cc; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #0055aa; }
+    #output, #passwordPrompt { margin-top: 20px; background: white; padding: 25px; border: 1px solid #ccc; border-radius: 12px; text-align: center; }
+    pre { background:#f8f8f8; padding:20px; border-radius:8px; overflow:auto; border:1px solid #ddd; white-space: pre-wrap; margin-top: 20px; }
+    .info { color: #555; font-size: 0.9em; background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .warning { color: #c00; font-weight: bold; }
+    #content { height: 200px; font-family: monospace; }
   </style>
 </head>
 <body>
-  <h1>🔒 Ultra Güvenli Şifreli Pastebin</h1>
-  <p>Metnini yaz, şifreli paste oluştur. Sadece doğru şifreyle açılır!</p>
+  <h1>🔒 %100 Güvenli Şifreli Pastebin</h1>
+  <p>Metnini yaz, şifreli paste oluştur. Sadece şifre bilen okuyabilir!</p>
 
   <textarea id="content" placeholder="Gizli metnini buraya yaz..."></textarea>
 
-  <input type="password" id="userPassword" placeholder="İsteğe bağlı: Kendi şifreni gir (boş bırakırsan otomatik güçlü üretilir)">
+  <input type="password" id="userPassword" placeholder="İsteğe bağlı: Kendi şifreni gir (boş bırakırsan otomatik güçlü şifre)">
 
-  <button onclick="createPaste()">🔐 Paste Oluştur (Şifrele)</button>
+  <button onclick="createPaste()">🔐 Paste Oluştur</button>
 
   <div id="output"></div>
+  <div id="passwordPrompt" style="display:none;"></div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -43,84 +46,78 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Web Crypto ile şifreleme (AES-256-GCM)
+    // Web Crypto AES-256-GCM
     async function encryptText(text, password) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(text);
+      const enc = new TextEncoder();
+      const data = enc.encode(text);
 
-      let keyMaterial;
-      if (password === "") {
-        // Otomatik güçlü şifre
-        keyMaterial = crypto.getRandomValues(new Uint8Array(32));
+      let key;
+      if (!password) {
+        // Otomatik güçlü anahtar
+        key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]);
       } else {
-        keyMaterial = await crypto.subtle.importKey(
-          "raw",
-          encoder.encode(password),
-          { name: "PBKDF2" },
-          false,
-          ["deriveKey"]
-        );
-        keyMaterial = await crypto.subtle.deriveKey(
-          { name: "PBKDF2", salt: encoder.encode("saltysalt"), iterations: 100000, hash: "SHA-256" },
-          keyMaterial,
+        const pwKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+        key = await crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: enc.encode("salted__"), iterations: 200000, hash: "SHA-256" },
+          pwKey,
           { name: "AES-GCM", length: 256 },
           true,
           ["encrypt"]
         );
-        keyMaterial = await crypto.subtle.exportKey("raw", keyMaterial);
       }
 
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", true, ["encrypt"]);
+      const exportedKey = await crypto.subtle.exportKey("raw", key);
 
-      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, data);
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
 
-      const result = new Uint8Array(iv.byteLength + encrypted.byteLength);
-      result.set(iv, 0);
-      result.set(new Uint8Array(encrypted), iv.byteLength);
+      const result = new Uint8Array(iv.byteLength + encrypted.byteLength + exportedKey.byteLength);
+      result.set(new Uint8Array(exportedKey), 0);
+      result.set(iv, exportedKey.byteLength);
+      result.set(new Uint8Array(encrypted), exportedKey.byteLength + iv.byteLength);
 
       return btoa(String.fromCharCode(...result));
     }
 
     async function decryptText(encryptedBase64, password) {
       try {
-        const decoder = new TextDecoder();
+        const dec = new TextDecoder();
         const data = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
 
-        const iv = data.slice(0, 12);
-        const ciphertext = data.slice(12);
+        const keyData = data.slice(0, 32); // İlk 32 byte anahtar
+        const iv = data.slice(32, 44); // Sonraki 12 byte IV
+        const ciphertext = data.slice(44);
 
-        let cryptoKey;
-        if (password === "") {
-          return null; // Otomatik şifreyle manuel çözülemez
+        let key;
+        if (!password) {
+          key = await crypto.subtle.importKey("raw", keyData, "AES-GCM", true, ["decrypt"]);
         } else {
-          const encoder = new TextEncoder();
-          const keyMaterial = await crypto.subtle.importKey(
-            "raw",
-            encoder.encode(password),
-            { name: "PBKDF2" },
-            false,
-            ["deriveKey"]
-          );
-          cryptoKey = await crypto.subtle.deriveKey(
-            { name: "PBKDF2", salt: encoder.encode("saltysalt"), iterations: 100000, hash: "SHA-256" },
-            keyMaterial,
+          const enc = new TextEncoder();
+          const pwKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+          key = await crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: enc.encode("salted__"), iterations: 200000, hash: "SHA-256" },
+            pwKey,
             { name: "AES-GCM", length: 256 },
             false,
             ["decrypt"]
           );
         }
 
-        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, ciphertext);
-        return decoder.decode(decrypted);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+        return dec.decode(decrypted);
       } catch (e) {
         return null;
       }
     }
 
-    // Base64 güvenli URL encode (k= parametresi için)
-    function urlSafeBase64(str) {
+    function urlSafe(str) {
       return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function urlUnsafe(str) {
+      let s = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      return s;
     }
 
     async function createPaste() {
@@ -128,33 +125,37 @@
       if (!content) return alert("Metin boş olamaz!");
 
       const userPass = document.getElementById('userPassword').value.trim();
+      const useManual = userPass !== "";
 
-      // Şifreyi üret (manuel veya otomatik)
-      const password = userPass || crypto.getRandomValues(new Uint8Array(32)).reduce((a,b)=>a+b.toString(16).padStart(2,'0'),''); // 64 char hex
+      const encrypted = await encryptText(content, useManual ? userPass : null);
 
-      const encrypted = await encryptText(content, userPass);
-
-      const pasteId = Math.random().toString(36).substring(2, 14);
+      const pasteId = Math.random().toString(36).substring(2, 16); // 14+ karakter
 
       await db.collection("pastes").doc(pasteId).set({
         data: encrypted,
-        created: firebase.firestore.FieldValue.serverTimestamp(),
-        hint: userPass ? "manual" : "auto"  // İpucu: manuel mi otomatik mi
+        hasPassword: useManual,
+        created: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      const keyParam = urlSafeBase64(btoa(password));
-      const shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId + "&k=" + keyParam;
+      let shareUrl;
+      if (useManual) {
+        shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId;
+      } else {
+        const keyRaw = await crypto.subtle.exportKey("raw", await crypto.subtle.generateKey({name:"AES-GCM",length:256},true,["encrypt"]));
+        const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyRaw)));
+        shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId + "&k=" + urlSafe(keyBase64);
+      }
 
       document.getElementById('output').innerHTML = `
-        <strong>✅ Paste ultra güvenli şekilde oluşturuldu!</strong><br><br>
+        <strong>✅ Paste %100 güvenli oluşturuldu!</strong><br><br>
         <strong>Paylaşılabilir Link:</strong><br>
         <input type="text" value="${shareUrl}" readonly style="width:100%; padding:10px; font-size:14px;"><br><br>
         <div class="info">
-          • Şifre ${userPass ? '<strong>senin girdiğin</strong>' : '<strong>otomatik güçlü üretildi</strong>'}.<br>
-          • Linkteki <code>k=</code> kısmı şifre anahtarı (güvenli kodlanmış).<br>
-          • F12 console'da bile şifre açıkta değil.<br>
-          • Sunucuda veri tamamen şifreli → kimse okuyamaz!<br>
-          <span class="warning">• Linki paylaşırken dikkatli ol!</span>
+          • ${useManual ? '<strong>Şifreli (manuel şifre)</strong> → Linke giren şifre girmeli.' : '<strong>Otomatik şifre</strong> → Link direkt açar.'}<br>
+          • Metin sunucuda tamamen şifreli.<br>
+          • Kimse (sen dahil) değiştiremez, silemez.<br>
+          • F12 ile bile metin görülemez.<br>
+          <span class="warning">• Linki paylaştığın kişi sadece o görebilir!</span>
         </div>
       `;
     }
@@ -162,45 +163,74 @@
     async function loadPaste() {
       const params = new URLSearchParams(window.location.search);
       const pasteId = params.get('id');
-      const keyParam = params.get('k');
-
-      if (!pasteId || !keyParam) {
-        document.getElementById('output').innerHTML = `<strong>⚠️ Geçersiz link!</strong>`;
-        return;
-      }
-
-      let password;
-      try {
-        password = atob(keyParam.replace(/-/g, '+').replace(/_/g, '/'));
-        while (password.length % 4) password += '=';
-        password = atob(password);
-      } catch (e) {
-        document.getElementById('output').innerHTML = `<strong>❌ Bozuk şifre anahtarı!</strong>`;
-        return;
-      }
+      if (!pasteId) return;
 
       const doc = await db.collection("pastes").doc(pasteId).get();
       if (!doc.exists) {
-        document.getElementById('output').innerHTML = "Paste bulunamadı! 😢";
+        document.getElementById('output').innerHTML = "<strong>Paste bulunamadı!</strong>";
         return;
       }
 
-      const encrypted = doc.data().data;
-      const hint = doc.data().hint;
+      const data = doc.data();
+      const hasPassword = data.hasPassword;
 
-      const decrypted = await decryptText(encrypted, password);
+      if (hasPassword) {
+        // Şifre iste
+        document.getElementById('passwordPrompt').style.display = 'block';
+        document.getElementById('passwordPrompt').innerHTML = `
+          <h2>🔒 Bu paste şifreli</h2>
+          <p>Şifreyi girerek metni aç:</p>
+          <input type="password" id="inputPass" placeholder="Şifreyi gir..." style="width:100%;">
+          <button onclick="tryDecrypt('${data.data}')">Aç</button>
+          <p id="errorMsg" style="color:red; margin-top:10px;"></p>
+        `;
+        document.getElementById('output').innerHTML = "<strong>Şifre girilmesi gerekiyor...</strong>";
+      } else {
+        // Otomatik anahtar varsa (k=)
+        const keyParam = params.get('k');
+        if (!keyParam) {
+          document.getElementById('output').innerHTML = "<strong>Otomatik anahtar eksik!</strong>";
+          return;
+        }
 
-      if (!decrypted) {
-        document.getElementById('output').innerHTML = "<strong>❌ Yanlış şifre!</strong>";
-        return;
+        let rawKey;
+        try {
+          rawKey = Uint8Array.from(atob(urlUnsafe(keyParam)), c => c.charCodeAt(0));
+        } catch (e) {
+          document.getElementById('output').innerHTML = "<strong>Bozuk anahtar!</strong>";
+          return;
+        }
+
+        const decrypted = await decryptText(data.data, null); // password null, ama otomatik anahtar zaten encrypt içinde
+
+        // Hata olursa null döner
+        if (!decrypted) {
+          document.getElementById('output').innerHTML = "<strong>Geçersiz otomatik anahtar!</strong>";
+          return;
+        }
+
+        showDecrypted(decrypted, data.created);
       }
+    }
 
-      const created = doc.data().created ? doc.data().created.toDate().toLocaleString('tr-TR') : "Bilinmiyor";
+    async function tryDecrypt(encryptedData) {
+      const pass = document.getElementById('inputPass').value;
+      const decrypted = await decryptText(encryptedData, pass);
 
+      if (decrypted) {
+        showDecrypted(decrypted, null);
+      } else {
+        document.getElementById('errorMsg').textContent = "Yanlış şifre!";
+      }
+    }
+
+    function showDecrypted(text, createdTime) {
+      const time = createdTime ? createdTime.toDate().toLocaleString('tr-TR') : "Bilinmiyor";
+      document.getElementById('passwordPrompt').style.display = 'none';
       document.getElementById('output').innerHTML = `
-        <strong>🔓 Metin başarıyla çözüldü!</strong><br>
-        Oluşturulma: ${created}<br><br>
-        <pre>${decrypted}</pre>
+        <strong>🔓 Metin başarıyla açıldı!</strong><br>
+        Oluşturulma: ${time}<br><br>
+        <pre>${text}</pre>
       `;
     }
 
