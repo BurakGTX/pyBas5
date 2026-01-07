@@ -1,52 +1,198 @@
-let totalVisits = 0;
+import admin from "firebase-admin";
 
-// Son sıfırlama zamanı
-let lastReset = Date.now();
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE)
+    ),
+    databaseURL:
+      "https://pastebin-61d0b-default-rtdb.europe-west1.firebasedatabase.app"
+  });
+}
 
-// Sıfırlama süresi: 1 saat = 3600000 ms
-const RESET_INTERVAL = 60 * 60 * 1000;
+const db = admin.database();
 
-const fetchJSON = (url) => fetch(url).then(r => r.json());
+// =======================
+// MEMORY STORE
+// =======================
+const rateCache = {
+  value: null,
+  date: null,
+  timestamp: 0
+};
 
-export default async function handler(req,res){
-  const USER_ID = "3380915154";
+const ipStore = new Map();
 
-  // 1 saat kontrolü: geçmiş mi?
-  if(Date.now() - lastReset >= RESET_INTERVAL){
-    totalVisits = 0;
-    lastReset = Date.now();
+// AYARLAR
+const RATE_LIMIT_MS = 3000;
+const BURST_LIMIT = 5;
+const BURST_WINDOW = 10000;
+const BAN_TIME = 5 * 60 * 1000;
+const CACHE_TTL = 60 * 1000;
+
+export default async function handler(req, res) {
+  const now = Date.now();
+
+  // =======================
+  // API KEY KONTROL
+  // =======================
+  const { usd, apikey } = req.query;
+
+  if (!apikey) {
+    return res.status(401).json({
+      success: false,
+      message: "API key gerekli"
+    });
   }
 
-  // Ziyaretçi sayısını arttır
-  totalVisits++;
+  const keyRef = db.ref("apiKeys/" + apikey);
+  const keySnap = await keyRef.get();
 
-  try{
-    const user = await fetchJSON(`https://users.roblox.com/v1/users/${USER_ID}`);
-    const avatar = await fetchJSON(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${USER_ID}&size=420x420&format=Png`);
-    
-    let robux = 0;
-    try { robux=(await fetchJSON(`https://economy.roblox.com/v1/users/${USER_ID}/currency`)).robux; } catch{}
+  if (!keySnap.exists()) {
+    return res.status(403).json({
+      success: false,
+      message: "Geçersiz API key"
+    });
+  }
 
-    let friends=0, followers=0, following=0, groups=0;
-    try{ friends=(await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/friends/count`)).count; }catch{}
-    try{ followers=(await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followers/count`)).count; }catch{}
-    try{ following=(await fetchJSON(`https://friends.roblox.com/v1/users/${USER_ID}/followings/count`)).count; }catch{}
-    try{ groups=(await fetchJSON(`https://groups.roblox.com/v2/users/${USER_ID}/groups/roles`)).data.length; }catch{}
+  const keyData = keySnap.val();
 
-    let gamePasses = 0;
+  if (!keyData.active) {
+    return res.status(403).json({
+      success: false,
+      message: "API key pasif"
+    });
+  }
 
-    res.setHeader("Access-Control-Allow-Origin","*");
-    res.status(200).json({
-      user:{id:user.id,name:user.name,description:user.description,created:user.created,avatar:avatar.data[0].imageUrl},
-      stats:{robux,friends,followers,following,groups,gamePasses,visits:totalVisits}
+  // GÜNLÜK RESET
+  const today = new Date().toISOString().slice(0, 10);
+  if (keyData.lastReset !== today) {
+    keyData.usedToday = 0;
+    keyData.lastReset = today;
+  }
+
+  if (keyData.usedToday >= keyData.dailyLimit) {
+    return res.status(429).json({
+      success: false,
+      message: "Günlük limit doldu"
+    });
+  }
+
+  // =======================
+  // IP RATE LIMIT
+  // =======================
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket.remoteAddress ||
+    "unknown";
+
+  if (!ipStore.has(ip)) {
+    ipStore.set(ip, {
+      lastRequest: 0,
+      count: 0,
+      firstRequest: now,
+      bannedUntil: 0
+    });
+  }
+
+  const ipData = ipStore.get(ip);
+
+  if (ipData.bannedUntil > now) {
+    return res.status(429).json({
+      success: false,
+      message: "IP geçici olarak engellendi"
+    });
+  }
+
+  if (now - ipData.lastRequest < RATE_LIMIT_MS) {
+    return res.status(429).json({
+      success: false,
+      message: "Çok hızlı istek (3 saniye)"
+    });
+  }
+
+  if (now - ipData.firstRequest < BURST_WINDOW) {
+    ipData.count++;
+    if (ipData.count > BURST_LIMIT) {
+      ipData.bannedUntil = now + BAN_TIME;
+      return res.status(429).json({
+        success: false,
+        message: "Spam algılandı (5 dk ban)"
+      });
+    }
+  } else {
+    ipData.count = 1;
+    ipData.firstRequest = now;
+  }
+
+  ipData.lastRequest = now;
+
+  // =======================
+  // PARAMETRE
+  // =======================
+  if (!usd || isNaN(usd)) {
+    return res.status(400).json({
+      success: false,
+      message: "Geçerli USD gir"
+    });
+  }
+
+  try {
+    let rate;
+    let source = "live";
+
+    // CACHE
+    if (rateCache.value && now - rateCache.timestamp < CACHE_TTL) {
+      rate = rateCache.value;
+      source = "cache";
+    } else {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 3000);
+
+      const r = await fetch(
+        "https://free.ratesdb.com/v1/rates?from=USD&to=TRY",
+        { signal: controller.signal }
+      );
+      const j = await r.json();
+
+      rate = j.data.rates.TRY;
+      rateCache.value = rate;
+      rateCache.date = j.data.date;
+      rateCache.timestamp = now;
+    }
+
+    const result = usd * rate;
+
+    // LIMIT DÜŞ
+    await keyRef.update({
+      usedToday: keyData.usedToday + 1,
+      lastReset: keyData.lastReset
     });
 
-  } catch(e){
-    console.error(e);
-    res.setHeader("Access-Control-Allow-Origin","*");
-    res.status(200).json({
-      user:{id:USER_ID,name:"Bilinmiyor",description:"",created:"2022-03-10",avatar:""},
-      stats:{robux:0,friends:0,followers:0,following:0,groups:0,gamePasses:0,visits:totalVisits}
+    res.json({
+      success: true,
+      usd: Number(usd),
+      try: Number(result.toFixed(2)),
+      rate,
+      source,
+      limitLeft: keyData.dailyLimit - keyData.usedToday - 1
+    });
+
+  } catch (err) {
+    if (rateCache.value) {
+      return res.json({
+        success: true,
+        usd: Number(usd),
+        try: Number((usd * rateCache.value).toFixed(2)),
+        rate: rateCache.value,
+        source: "fallback-cache",
+        warning: "Canlı veri alınamadı"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Servis geçici olarak kapalı"
     });
   }
 }
