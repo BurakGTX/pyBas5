@@ -3,122 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pastebin + PDF/Dosya Yükle</title>
+  <title>Güvenli Şifreli Pastebin</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
-    textarea { width: 100%; height: 150px; font-family: monospace; }
-    input, button { padding: 10px; margin: 10px 0; }
-    #output { margin-top: 20px; white-space: pre-wrap; background: white; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
-    a { color: #0066cc; text-decoration: underline; }
-    .file-info { margin: 10px 0; font-size: 0.9em; color: #555; }
+    textarea { width: 100%; height: 200px; font-family: monospace; font-size: 16px; }
+    input, button { padding: 10px; margin: 10px 0; font-size: 16px; }
+    #output { margin-top: 20px; background: white; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    .info { color: #555; font-size: 0.9em; }
+    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
   </style>
+  <!-- Crypto-JS için CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 </head>
 <body>
-  <h1>Pastebin + PDF/Dosya Yükle</h1>
-  <p>Metin yazabilir ve/veya PDF ya da herhangi bir dosya yükleyebilirsin.</p>
+  <h1>🔒 Güvenli Şifreli Pastebin</h1>
+  <p>Metnini yaz, paste oluştur. Linkteki şifre ile sadece sen (veya paylaştığın kişi) okuyabilir!</p>
 
-  <textarea id="content" placeholder="Metin yaz (isteğe bağlı)..."></textarea><br>
+  <textarea id="content" placeholder="Buraya gizli metnini yaz..."></textarea><br>
+  <button onclick="createPaste()">🔐 Paste Oluştur (Şifrele)</button>
 
-  <input type="file" id="fileInput" accept=".pdf,application/pdf"><br>
-  <div class="file-info" id="fileInfo"></div>
-
-  <button onclick="createPaste()">Paste Oluştur</button>
-
-  <h2>Ya da Paste ID ile Oku</h2>
-  <input type="text" id="pasteId" placeholder="Paste ID gir (örnek: abc123)">
-  <button onclick="readPaste()">Oku</button>
+  <h2>Ya da Linkten Aç</h2>
+  <p>Paylaşılan linki buraya yapıştırıp açabilirsin (otomatik çözülür).</p>
 
   <div id="output"></div>
 
   <!-- Firebase SDK v9 Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAdYx6KnAiSY6mVtkLt_ZK1R0Rq3Uh1tRY",
       authDomain: "pastebin-61d0b.firebaseapp.com",
-      databaseURL: "https://pastebin-61d0b-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "pastebin-61d0b",
       storageBucket: "pastebin-61d0b.appspot.com",
       messagingSenderId: "984614843816",
-      appId: "1:984614843816:web:77260642b9b5903833999d",
-      measurementId: "G-VTELHHJP8X"
+      appId: "1:984614843816:web:77260642b9b5903833999d"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const storage = firebase.storage();
 
-    // Dosya seçildiğinde bilgi göster
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      const info = document.getElementById('fileInfo');
-      if (file) {
-        info.innerHTML = `<strong>Seçilen dosya:</strong> ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
-      } else {
-        info.innerHTML = '';
-      }
-    });
-
-    async function createPaste() {
-      const content = document.getElementById('content').value;
-      const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
-
-      if (!content && !file) return alert("Metin veya dosya ekle!");
-
-      const pasteId = Math.random().toString(36).substring(2, 8);
-
-      let fileUrl = null;
-      let fileName = null;
-      let fileSize = null;
-
-      if (file) {
-        // Dosya boyutu kontrolü (isteğe bağlı, örneğin 20MB sınırı)
-        if (file.size > 20 * 1024 * 1024) {
-          return alert("Dosya çok büyük! Maksimum 20 MB olabilir.");
-        }
-
-        const storageRef = storage.ref().child(`pastes/${pasteId}/${file.name}`);
-        await storageRef.put(file);
-        fileUrl = await storageRef.getDownloadURL();
-        fileName = file.name;
-        fileSize = (file.size / 1024 / 1024).toFixed(2) + " MB";
-      }
-
-      const data = {
-        text: content || "",
-        fileUrl: fileUrl || null,
-        fileName: fileName || null,
-        fileSize: fileSize || null,
-        created: new Date().toISOString()
-      };
-
-      await db.collection("pastes").doc(pasteId).set(data);
-
-      const url = window.location.href.split('?')[0] + "?id=" + pasteId;
-      let outputHTML = `<strong>Paste oluşturuldu! 🎉</strong><br>ID: <code>${pasteId}</code><br>
-                        Paylaşılabilir link: <a href="${url}" target="_blank">${url}</a><br><br>`;
-
-      if (data.text) {
-        outputHTML += `<strong>Metin:</strong><br>${data.text.replace(/\n/g, '<br>')}<br><br>`;
-      }
-      if (fileUrl) {
-        outputHTML += `<strong>Dosya:</strong><br>
-                       <a href="${fileUrl}" target="_blank" download="${fileName}">
-                         📄 ${fileName} (${fileSize}) - İndir veya Görüntüle
-                       </a>`;
-      }
-
-      document.getElementById('output').innerHTML = outputHTML;
-      history.pushState({}, '', url);
+    // Şifreleme fonksiyonu (AES)
+    function encryptText(text, password) {
+      return CryptoJS.AES.encrypt(text, password).toString();
     }
 
-    async function readPaste() {
-      const pasteId = document.getElementById('pasteId').value.trim();
-      if (!pasteId) return alert("ID gir!");
+    function decryptText(encryptedText, password) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedText, password);
+        return bytes.toString(CryptoJS.enc.Utf8);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function createPaste() {
+      const content = document.getElementById('content').value.trim();
+      if (!content) return alert("Metin boş olamaz!");
+
+      const pasteId = Math.random().toString(36).substring(2, 10);
+      const password = CryptoJS.lib.WordArray.random(32).toString(); // Güçlü rastgele şifre
+
+      const encrypted = encryptText(content, password);
+
+      await db.collection("pastes").doc(pasteId).set({
+        data: encrypted,
+        created: new Date().toISOString()
+      });
+
+      const shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId + "#" + password;
+
+      document.getElementById('output').innerHTML = `
+        <strong>✅ Paste başarıyla şifrelendi ve oluşturuldu!</strong><br><br>
+        <strong>Paylaşılabilir Link:</strong><br>
+        <input type="text" value="${shareUrl}" readonly style="width:100%; padding:10px; font-size:14px;"><br><br>
+        <p class="info">
+          • Bu linkteki <code>#</code> sonrasındaki kısım şifre anahtarıdır.<br>
+          • Linki paylaştığın kişi direkt okuyabilir (şifre otomatik alınır).<br>
+          • Sunucuda sadece şifreli veri saklanır → kimse okuyamaz!
+        </p>
+      `;
+    }
+
+    async function loadPaste() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pasteId = urlParams.get('id');
+      if (!pasteId) return;
+
+      const hash = window.location.hash.substring(1); // #sonrası şifre
+      if (!hash) {
+        document.getElementById('output').innerHTML = `<strong>⚠️ Şifre anahtarı eksik!</strong> Link tam olmalı: ?id=...#şifre`;
+        return;
+      }
 
       const doc = await db.collection("pastes").doc(pasteId).get();
       if (!doc.exists) {
@@ -126,28 +103,23 @@
         return;
       }
 
-      const data = doc.data();
-      let outputHTML = `<strong>ID: ${pasteId}</strong><br>Tarih: ${new Date(data.created).toLocaleString('tr-TR')}<br><br>`;
+      const encryptedData = doc.data().data;
+      const decrypted = decryptText(encryptedData, hash);
 
-      if (data.text) {
-        outputHTML += `<strong>Metin:</strong><br>${data.text.replace(/\n/g, '<br>')}<br><br>`;
-      }
-      if (data.fileUrl) {
-        outputHTML += `<strong>Dosya:</strong><br>
-                       <a href="${data.fileUrl}" target="_blank" download="${data.fileName}">
-                         📄 ${data.fileName} (${data.fileSize}) - İndir veya Görüntüle
-                       </a>`;
+      if (!decrypted) {
+        document.getElementById('output').innerHTML = "<strong>❌ Yanlış şifre veya bozuk veri!</strong>";
+        return;
       }
 
-      document.getElementById('output').innerHTML = outputHTML;
+      document.getElementById('output').innerHTML = `
+        <strong>🔓 Metin başarıyla çözüldü!</strong><br>
+        Tarih: ${new Date(doc.data().created).toLocaleString('tr-TR')}<br><br>
+        <pre style="background:#f8f8f8; padding:15px; border-radius:8px; overflow:auto;">${decrypted}</pre>
+      `;
     }
 
-    // Sayfa yüklendiğinde ?id= varsa otomatik oku
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('id')) {
-      document.getElementById('pasteId').value = urlParams.get('id');
-      readPaste();
-    }
+    // Sayfa yüklendiğinde linkte id varsa otomatik aç
+    window.onload = loadPaste;
   </script>
 </body>
 </html>
