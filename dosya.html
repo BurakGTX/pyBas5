@@ -3,19 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Basit Pastebin</title>
+  <title>Basit Pastebin + Fotoğraf</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
-    textarea { width: 100%; height: 200px; font-family: monospace; }
+    textarea { width: 100%; height: 150px; font-family: monospace; }
     input, button { padding: 10px; margin: 10px 0; }
-    #output { margin-top: 20px; white-space: pre-wrap; background: white; padding: 15px; border: 1px solid #ccc; }
+    #output { margin-top: 20px; white-space: pre-wrap; background: white; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+    img { max-width: 100%; border-radius: 8px; margin: 10px 0; }
+    .preview { margin: 15px 0; }
   </style>
 </head>
 <body>
-  <h1>Basit Pastebin (Firebase ile)</h1>
-  <p>Metin yaz, "Paste Oluştur" butonuna bas. Linki paylaşarak başkaları okuyabilir.</p>
+  <h1>Basit Pastebin + Fotoğraf Yükle</h1>
+  <p>Metin yazabilir, fotoğraf yükleyebilirsin. İkisi birlikte aynı paste'de saklanır.</p>
 
-  <textarea id="content" placeholder="Buraya metnini yaz..."></textarea><br>
+  <textarea id="content" placeholder="Metin yaz (isteğe bağlı)..."></textarea><br>
+
+  <input type="file" id="photo" accept="image/*"><br>
+  <div class="preview" id="preview"></div>
+
   <button onclick="createPaste()">Paste Oluştur</button>
 
   <h2>Ya da Paste ID ile Oku</h2>
@@ -24,68 +30,105 @@
 
   <div id="output"></div>
 
-  <!-- Firebase SDK v9 Compat (daha stabil) -->
+  <!-- Firebase SDK v9 Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <script>
-    // BURAYA KENDİ FİREBASE CONFIG'İNİ YAPIŞTIR!
     const firebaseConfig = {
       apiKey: "AIzaSyAdYx6KnAiSY6mVtkLt_ZK1R0Rq3Uh1tRY",
       authDomain: "pastebin-61d0b.firebaseapp.com",
+      databaseURL: "https://pastebin-61d0b-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "pastebin-61d0b",
-      storageBucket: "pastebin-61d0b.firebasestorage.app",
-      messagingSenderId: "G-VTELHHJP8X",
-      appId: "1:984614843816:web:77260642b9b5903833999d"
+      storageBucket: "pastebin-61d0b.appspot.com",
+      messagingSenderId: "984614843816",
+      appId: "1:984614843816:web:77260642b9b5903833999d",
+      measurementId: "G-VTELHHJP8X"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const storage = firebase.storage();
 
-    function createPaste() {
+    // Fotoğraf önizleme
+    document.getElementById('photo').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+      if (file) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        preview.appendChild(img);
+        preview.innerHTML += `<p><strong>Seçilen dosya:</strong> ${file.name} (${(file.size/1024).toFixed(1)} KB)</p>`;
+      }
+    });
+
+    async function createPaste() {
       const content = document.getElementById('content').value;
-      if (!content) return alert("Metin boş olamaz!");
+      const fileInput = document.getElementById('photo');
+      const file = fileInput.files[0];
 
-      // Rastgele ID üret
+      if (!content && !file) return alert("Metin veya fotoğraf ekle!");
+
       const pasteId = Math.random().toString(36).substring(2, 8);
 
-      db.collection("pastes").doc(pasteId).set({
-        text: content,
+      let photoUrl = null;
+      if (file) {
+        const storageRef = storage.ref().child(`pastes/${pasteId}/${file.name}`);
+        await storageRef.put(file);
+        photoUrl = await storageRef.getDownloadURL();
+      }
+
+      const data = {
+        text: content || "",
+        photo: photoUrl || null,
         created: new Date().toISOString()
-      })
-      .then(() => {
-        const url = window.location.href.split('?')[0] + "?id=" + pasteId;
-        document.getElementById('output').innerHTML = 
-          `<strong>Paste oluşturuldu!</strong><br>ID: ${pasteId}<br>
-           Link: <a href="${url}">${url}</a><br><br>İçerik:<br>${content.replace(/\n/g, '<br>')}`;
-        history.pushState({}, '', url);
-      })
-      .catch((error) => {
-        alert("Hata: " + error.message);
-      });
+      };
+
+      await db.collection("pastes").doc(pasteId).set(data);
+
+      const url = window.location.href.split('?')[0] + "?id=" + pasteId;
+      let outputHTML = `<strong>Paste oluşturuldu! 🎉</strong><br>ID: <code>${pasteId}</code><br>
+                        Link: <a href="${url}" target="_blank">${url}</a><br><br>`;
+
+      if (data.text) {
+        outputHTML += `<strong>Metin:</strong><br>${data.text.replace(/\n/g, '<br>')}<br><br>`;
+      }
+      if (photoUrl) {
+        outputHTML += `<strong>Fotoğraf:</strong><br><img src="${photoUrl}" alt="Yüklenen fotoğraf">`;
+      }
+
+      document.getElementById('output').innerHTML = outputHTML;
+      history.pushState({}, '', url);
     }
 
-    function readPaste() {
-      const pasteId = document.getElementById('pasteId').value;
+    async function readPaste() {
+      const pasteId = document.getElementById('pasteId').value.trim();
       if (!pasteId) return alert("ID gir!");
 
-      db.collection("pastes").doc(pasteId).get()
-      .then((doc) => {
-        if (doc.exists) {
-          const data = doc.data();
-          document.getElementById('output').innerHTML = 
-            `<strong>ID: ${pasteId}</strong><br>Tarih: ${data.created}<br><br>${data.text.replace(/\n/g, '<br>')}`;
-        } else {
-          document.getElementById('output').innerHTML = "Paste bulunamadı!";
-        }
-      })
-      .catch((error) => {
-        alert("Hata: " + error.message);
-      });
+      const doc = await db.collection("pastes").doc(pasteId).get();
+      if (!doc.exists) {
+        document.getElementById('output').innerHTML = "Paste bulunamadı! 😢";
+        return;
+      }
+
+      const data = doc.data();
+      let outputHTML = `<strong>ID: ${pasteId}</strong><br>Tarih: ${new Date(data.created).toLocaleString('tr-TR')}<br><br>`;
+
+      if (data.text) {
+        outputHTML += `<strong>Metin:</strong><br>${data.text.replace(/\n/g, '<br>')}<br><br>`;
+      }
+      if (data.photo) {
+        outputHTML += `<strong>Fotoğraf:</strong><br><img src="${data.photo}" alt="Paste fotoğrafı">`;
+      }
+
+      document.getElementById('output').innerHTML = outputHTML;
     }
 
-    // Sayfa yüklendiğinde URL'den ID varsa oku
+    // Sayfa açıldığında URL'deki ?id= varsa otomatik oku
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('id')) {
       document.getElementById('pasteId').value = urlParams.get('id');
