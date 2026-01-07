@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basit Pastebin</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
+    textarea { width: 100%; height: 200px; font-family: monospace; }
+    input, button { padding: 10px; margin: 10px 0; }
+    #output { margin-top: 20px; white-space: pre-wrap; background: white; padding: 15px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Basit Pastebin (Firebase ile)</h1>
+  <p>Metin yaz, "Paste Oluştur" butonuna bas. Linki paylaşarak başkaları okuyabilir.</p>
+
+  <textarea id="content" placeholder="Buraya metnini yaz..."></textarea><br>
+  <button onclick="createPaste()">Paste Oluştur</button>
+
+  <h2>Ya da Paste ID ile Oku</h2>
+  <input type="text" id="pasteId" placeholder="Paste ID gir (örnek: abc123)">
+  <button onclick="readPaste()">Oku</button>
+
+  <div id="output"></div>
+
+  <!-- Firebase SDK (v9 modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // BURAYA KENDİ FİREBASE CONFIG'İNİ YAPIŞTIR!
+    const firebaseConfig = {
+      apiKey: "KENDİ_API_KEY'İN",
+      authDomain: "projen-adı.firebaseapp.com",
+      projectId: "projen-adı",
+      storageBucket: "projen-adı.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.createPaste = async () => {
+      const content = document.getElementById('content').value;
+      if (!content) return alert("Metin boş olamaz!");
+
+      // Rastgele ID üret (6 karakter)
+      const pasteId = Math.random().toString(36).substring(2, 8);
+
+      await setDoc(doc(db, "pastes", pasteId), {
+        text: content,
+        created: new Date().toISOString()
+      });
+
+      const url = window.location.href + "?id=" + pasteId;
+      document.getElementById('output').innerHTML = 
+        `<strong>Paste oluşturuldu!</strong><br>ID: ${pasteId}<br>
+         Link: <a href="${url}">${url}</a><br><br>İçerik:<br>${content.replace(/\n/g, '<br>')}`;
+      
+      // URL'yi güncelle
+      history.pushState({}, '', url);
+    };
+
+    window.readPaste = async () => {
+      const pasteId = document.getElementById('pasteId').value;
+      if (!pasteId) return alert("ID gir!");
+
+      const docRef = doc(db, "pastes", pasteId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        document.getElementById('output').innerHTML = 
+          `<strong>ID: ${pasteId}</strong><br>Tarih: ${data.created}<br><br>${data.text.replace(/\n/g, '<br>')}`;
+      } else {
+        document.getElementById('output').innerHTML = "Paste bulunamadı!";
+      }
+    };
+
+    // Sayfa yüklendiğinde URL'den ID varsa otomatik oku
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('id')) {
+      document.getElementById('pasteId').value = urlParams.get('id');
+      readPaste();
+    }
+  </script>
+</body>
+</html>
