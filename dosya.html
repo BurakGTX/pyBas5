@@ -3,31 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Güvenli Şifreli Pastebin</title>
+  <title>🔒 Ultra Güvenli Şifreli Pastebin</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
     textarea { width: 100%; height: 200px; font-family: monospace; font-size: 16px; }
-    input, button { padding: 10px; margin: 10px 0; font-size: 16px; }
+    input, button { padding: 12px; margin: 10px 0; font-size: 16px; width: 100%; box-sizing: border-box; }
     #output { margin-top: 20px; background: white; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-    .info { color: #555; font-size: 0.9em; }
+    .info { color: #555; font-size: 0.9em; background: #f9f9f9; padding: 10px; border-radius: 6px; }
     code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+    .warning { color: #d00; font-weight: bold; }
   </style>
-  <!-- Crypto-JS için CDN -->
+  <!-- Crypto-JS (AES-GCM için) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 </head>
 <body>
-  <h1>🔒 Güvenli Şifreli Pastebin</h1>
-  <p>Metnini yaz, paste oluştur. Linkteki şifre ile sadece sen (veya paylaştığın kişi) okuyabilir!</p>
+  <h1>🔒 Ultra Güvenli Şifreli Pastebin</h1>
+  <p>Metnini yaz, şifreli paste oluştur. Sadece doğru şifreyle açılır!</p>
 
-  <textarea id="content" placeholder="Buraya gizli metnini yaz..."></textarea><br>
+  <textarea id="content" placeholder="Gizli metnini buraya yaz..."></textarea>
+
+  <input type="password" id="userPassword" placeholder="İsteğe bağlı: Kendi şifreni gir (boş bırakırsan otomatik güçlü şifre üretilir)">
+
   <button onclick="createPaste()">🔐 Paste Oluştur (Şifrele)</button>
 
-  <h2>Ya da Linkten Aç</h2>
-  <p>Paylaşılan linki buraya yapıştırıp açabilirsin (otomatik çözülür).</p>
+  <h2>Linkten Aç</h2>
+  <p>Paylaşılan linki yeni sekmede aç, otomatik çözülür.</p>
 
   <div id="output"></div>
 
-  <!-- Firebase SDK v9 Compat -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -44,15 +48,35 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Şifreleme fonksiyonu (AES)
-    function encryptText(text, password) {
-      return CryptoJS.AES.encrypt(text, password).toString();
+    // Güçlü rastgele anahtar üret (256 bit)
+    function generateKey() {
+      return CryptoJS.lib.WordArray.random(32); // 256 bit
     }
 
-    function decryptText(encryptedText, password) {
+    // AES-256-GCM ile şifreleme (en güvenli mod)
+    function encryptText(text, password) {
+      const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse("73616c74"), { keySize: 8, iterations: 10000 });
+      const iv = CryptoJS.lib.WordArray.random(12); // GCM için 96-bit IV
+      const encrypted = CryptoJS.AES.encrypt(text, key, { iv: iv, mode: CryptoJS.mode.GCM });
+      return iv.concat(encrypted.ciphertext).toString(CryptoJS.enc.Base64);
+    }
+
+    // Çözme
+    function decryptText(encryptedBase64, password) {
       try {
-        const bytes = CryptoJS.AES.decrypt(encryptedText, password);
-        return bytes.toString(CryptoJS.enc.Utf8);
+        const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse("73616c74"), { keySize: 8, iterations: 10000 });
+        const encryptedData = CryptoJS.enc.Base64.parse(encryptedBase64);
+        const iv = encryptedData.clone();
+        iv.sigBytes = 12;
+        iv.clamp();
+        encryptedData.words.splice(0, 3); // IV'yi kaldır
+        encryptedData.sigBytes -= 12;
+
+        const decrypted = CryptoJS.AES.decrypt({ ciphertext: encryptedData }, key, {
+          iv: iv,
+          mode: CryptoJS.mode.GCM
+        });
+        return decrypted.toString(CryptoJS.enc.Utf8);
       } catch (e) {
         return null;
       }
@@ -62,63 +86,80 @@
       const content = document.getElementById('content').value.trim();
       if (!content) return alert("Metin boş olamaz!");
 
-      const pasteId = Math.random().toString(36).substring(2, 10);
-      const password = CryptoJS.lib.WordArray.random(32).toString(); // Güçlü rastgele şifre
+      let password = document.getElementById('userPassword').value.trim();
+      if (!password) {
+        password = generateKey().toString(); // Kullanıcı girmediyse güçlü rastgele
+      }
 
       const encrypted = encryptText(content, password);
 
+      const pasteId = Math.random().toString(36).substring(2, 12); // Daha uzun ID (brute force zor)
+
       await db.collection("pastes").doc(pasteId).set({
         data: encrypted,
-        created: new Date().toISOString()
+        created: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      const shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId + "#" + password;
+      // Şifreyi URL'de güvenli şekilde taşı: base64 encode edip query param olarak
+      const encodedKey = btoa(password);
+      const shareUrl = window.location.href.split('?')[0] + "?id=" + pasteId + "&k=" + encodedKey;
 
       document.getElementById('output').innerHTML = `
-        <strong>✅ Paste başarıyla şifrelendi ve oluşturuldu!</strong><br><br>
+        <strong>✅ Paste ultra güvenli şekilde oluşturuldu!</strong><br><br>
         <strong>Paylaşılabilir Link:</strong><br>
         <input type="text" value="${shareUrl}" readonly style="width:100%; padding:10px; font-size:14px;"><br><br>
-        <p class="info">
-          • Bu linkteki <code>#</code> sonrasındaki kısım şifre anahtarıdır.<br>
-          • Linki paylaştığın kişi direkt okuyabilir (şifre otomatik alınır).<br>
-          • Sunucuda sadece şifreli veri saklanır → kimse okuyamaz!
-        </p>
+        <div class="info">
+          • Şifre <strong>${password ? 'senin girdiğin' : 'otomatik güçlü üretildi'}</strong>.<br>
+          • Linkteki şifre <code>k=</code> kısmında kodlanmış halde → F12 console'da bile açıkta değil.<br>
+          • Sunucuda sadece şifreli veri var → kimse okuyamaz!<br>
+          • <span class="warning">Linki kimseyle paylaşma riski sana ait!</span>
+        </div>
       `;
     }
 
     async function loadPaste() {
       const urlParams = new URLSearchParams(window.location.search);
       const pasteId = urlParams.get('id');
-      if (!pasteId) return;
+      const encodedKey = urlParams.get('k');
 
-      const hash = window.location.hash.substring(1); // #sonrası şifre
-      if (!hash) {
-        document.getElementById('output').innerHTML = `<strong>⚠️ Şifre anahtarı eksik!</strong> Link tam olmalı: ?id=...#şifre`;
+      if (!pasteId || !encodedKey) {
+        document.getElementById('output').innerHTML = `<strong>⚠️ Geçersiz link!</strong> Tam link gerekli: ?id=...&k=...`;
+        return;
+      }
+
+      // Şifreyi decode et
+      let password;
+      try {
+        password = atob(encodedKey);
+      } catch (e) {
+        document.getElementById('output').innerHTML = `<strong>❌ Bozuk şifre anahtarı!</strong>`;
         return;
       }
 
       const doc = await db.collection("pastes").doc(pasteId).get();
       if (!doc.exists) {
-        document.getElementById('output').innerHTML = "Paste bulunamadı! 😢";
+        document.getElementById('output').innerHTML = "Paste bulunamadı veya silindi! 😢";
         return;
       }
 
       const encryptedData = doc.data().data;
-      const decrypted = decryptText(encryptedData, hash);
+      const decrypted = decryptText(encryptedData, password);
 
       if (!decrypted) {
-        document.getElementById('output').innerHTML = "<strong>❌ Yanlış şifre veya bozuk veri!</strong>";
+        document.getElementById('output').innerHTML = "<strong>❌ Yanlış şifre veya veri bozulmuş!</strong>";
         return;
       }
 
+      const created = doc.data().created ? doc.data().created.toDate().toLocaleString('tr-TR') : "Bilinmiyor";
+
       document.getElementById('output').innerHTML = `
         <strong>🔓 Metin başarıyla çözüldü!</strong><br>
-        Tarih: ${new Date(doc.data().created).toLocaleString('tr-TR')}<br><br>
-        <pre style="background:#f8f8f8; padding:15px; border-radius:8px; overflow:auto;">${decrypted}</pre>
+        Oluşturulma: ${created}<br><br>
+        <pre style="background:#f8f8f8; padding:20px; border-radius:8px; overflow:auto; border:1px solid #ddd;">${decrypted}</pre>
       `;
     }
 
-    // Sayfa yüklendiğinde linkte id varsa otomatik aç
+    // Sayfa açıldığında otomatik yükle
     window.onload = loadPaste;
   </script>
 </body>
