@@ -1,4 +1,20 @@
-// Basit memory store (Vercel için yeterli)
+import admin from "firebase-admin";
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE)
+    ),
+    databaseURL:
+      "https://pastebin-61d0b-default-rtdb.europe-west1.firebasedatabase.app"
+  });
+}
+
+const db = admin.database();
+
+// =======================
+// MEMORY STORE
+// =======================
 const rateCache = {
   value: null,
   date: null,
@@ -8,21 +24,68 @@ const rateCache = {
 const ipStore = new Map();
 
 // AYARLAR
-const RATE_LIMIT_MS = 3000;      // 3 saniye
-const BURST_LIMIT = 5;           // kısa sürede max istek
-const BURST_WINDOW = 10000;      // 10 saniye
-const BAN_TIME = 5 * 60 * 1000;  // 5 dakika
-const CACHE_TTL = 60 * 1000;     // 1 dakika
+const RATE_LIMIT_MS = 3000;
+const BURST_LIMIT = 5;
+const BURST_WINDOW = 10000;
+const BAN_TIME = 5 * 60 * 1000;
+const CACHE_TTL = 60 * 1000;
 
 export default async function handler(req, res) {
+  const now = Date.now();
+
+  // =======================
+  // API KEY KONTROL
+  // =======================
+  const { usd, apikey } = req.query;
+
+  if (!apikey) {
+    return res.status(401).json({
+      success: false,
+      message: "API key gerekli"
+    });
+  }
+
+  const keyRef = db.ref("apiKeys/" + apikey);
+  const keySnap = await keyRef.get();
+
+  if (!keySnap.exists()) {
+    return res.status(403).json({
+      success: false,
+      message: "Geçersiz API key"
+    });
+  }
+
+  const keyData = keySnap.val();
+
+  if (!keyData.active) {
+    return res.status(403).json({
+      success: false,
+      message: "API key pasif"
+    });
+  }
+
+  // GÜNLÜK RESET
+  const today = new Date().toISOString().slice(0, 10);
+  if (keyData.lastReset !== today) {
+    keyData.usedToday = 0;
+    keyData.lastReset = today;
+  }
+
+  if (keyData.usedToday >= keyData.dailyLimit) {
+    return res.status(429).json({
+      success: false,
+      message: "Günlük limit doldu"
+    });
+  }
+
+  // =======================
+  // IP RATE LIMIT
+  // =======================
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0] ||
     req.socket.remoteAddress ||
     "unknown";
 
-  const now = Date.now();
-
-  // IP kaydı
   if (!ipStore.has(ip)) {
     ipStore.set(ip, {
       lastRequest: 0,
@@ -34,32 +97,27 @@ export default async function handler(req, res) {
 
   const ipData = ipStore.get(ip);
 
-  // BAN KONTROL
   if (ipData.bannedUntil > now) {
     return res.status(429).json({
       success: false,
-      message: "Geçici olarak engellendin",
-      retryAfter: Math.ceil((ipData.bannedUntil - now) / 1000)
+      message: "IP geçici olarak engellendi"
     });
   }
 
-  // 3 SANİYE KURALI
   if (now - ipData.lastRequest < RATE_LIMIT_MS) {
     return res.status(429).json({
       success: false,
-      message: "Çok hızlı istek",
-      rule: "3 saniyede 1 istek"
+      message: "Çok hızlı istek (3 saniye)"
     });
   }
 
-  // BURST KONTROL
   if (now - ipData.firstRequest < BURST_WINDOW) {
     ipData.count++;
     if (ipData.count > BURST_LIMIT) {
       ipData.bannedUntil = now + BAN_TIME;
       return res.status(429).json({
         success: false,
-        message: "Spam algılandı, 5 dk ban"
+        message: "Spam algılandı (5 dk ban)"
       });
     }
   } else {
@@ -69,8 +127,9 @@ export default async function handler(req, res) {
 
   ipData.lastRequest = now;
 
+  // =======================
   // PARAMETRE
-  const { usd } = req.query;
+  // =======================
   if (!usd || isNaN(usd)) {
     return res.status(400).json({
       success: false,
@@ -82,13 +141,13 @@ export default async function handler(req, res) {
     let rate;
     let source = "live";
 
-    // CACHE KONTROL
+    // CACHE
     if (rateCache.value && now - rateCache.timestamp < CACHE_TTL) {
       rate = rateCache.value;
       source = "cache";
     } else {
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 3000); // timeout
+      setTimeout(() => controller.abort(), 3000);
 
       const r = await fetch(
         "https://free.ratesdb.com/v1/rates?from=USD&to=TRY",
@@ -104,19 +163,24 @@ export default async function handler(req, res) {
 
     const result = usd * rate;
 
-    res.status(200).json({
+    // LIMIT DÜŞ
+    await keyRef.update({
+      usedToday: keyData.usedToday + 1,
+      lastReset: keyData.lastReset
+    });
+
+    res.json({
       success: true,
       usd: Number(usd),
       try: Number(result.toFixed(2)),
       rate,
       source,
-      date: rateCache.date || null
+      limitLeft: keyData.dailyLimit - keyData.usedToday - 1
     });
 
   } catch (err) {
-    // FALLBACK
     if (rateCache.value) {
-      return res.status(200).json({
+      return res.json({
         success: true,
         usd: Number(usd),
         try: Number((usd * rateCache.value).toFixed(2)),
@@ -128,7 +192,7 @@ export default async function handler(req, res) {
 
     res.status(500).json({
       success: false,
-      message: "Servis geçici olarak kullanılamıyor"
+      message: "Servis geçici olarak kapalı"
     });
   }
 }
